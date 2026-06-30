@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Live Mass Interpreter</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main>
+    <h1>Live Mass Interpreter</h1>
+
+    <div class="controls">
+      <button id="startBtn" disabled>Start</button>
+      <button id="stopBtn" disabled>Stop</button>
+    </div>
+
+    <p id="status" class="status">Loading...</p>
+
+    <details>
+      <summary>Transcript (debug)</summary>
+      <div id="transcript" class="transcript"></div>
+    </details>
+  </main>
+
+  <script type="module" src="src/app.js"></script>
+</body>
+</html>

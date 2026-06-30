@@ -1,0 +1,60 @@
+body {
+  font-family: system-ui, sans-serif;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 1.5rem;
+  text-align: center;
+}
+
+h1 {
+  font-size: 1.25rem;
+}
+
+.controls {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin: 2rem 0;
+}
+
+button {
+  font-size: 1.25rem;
+  padding: 1rem 2rem;
+  border-radius: 0.5rem;
+  border: none;
+  cursor: pointer;
+}
+
+#startBtn {
+  background: #2e7d32;
+  color: white;
+}
+
+#stopBtn {
+  background: #c62828;
+  color: white;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.status {
+  font-size: 1.1rem;
+  min-height: 1.5em;
+}
+
+details {
+  margin-top: 2rem;
+  text-align: left;
+}
+
+.transcript {
+  max-height: 40vh;
+  overflow-y: auto;
+  font-size: 0.85rem;
+  color: #555;
+  border-top: 1px solid #ddd;
+  padding-top: 0.5rem;
+}

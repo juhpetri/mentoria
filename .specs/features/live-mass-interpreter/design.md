@@ -52,8 +52,8 @@ HTTP API.
 | `normalize` | Lowercase + strip accents/punctuation to a comparable form for matching. | R3, R36 |
 | `router` | The brain: classify each finalized segment (fixed Ordinary / day-specific / Missal-variant / sung / unknown) and dispatch. Holds the dedup guard (R10) and the verify-before-trust check (R36). | R3, R4, R10, R12, R36 |
 | `catalog.ordinary` | Static catalog of the fixed Ordinary parts (today's `liturgy.js`), keyword → {EN title, EN text, explanation}. | R2, R11 |
-| `catalog.missal` | Indexed JSON catalogs sourced from the Missal PDF: `coleta`, `prefacio`, `oracao-eucaristica`, `rito-comunhao`, `pos-comunhao`, `credo`. Keyword(opening words) → {PT, EN}. | R30, R38, R39, R40, R41 |
-| `liturgy` | On startup, fetch the day's liturgy (readings/psalm/gospel) from Liturgia API v3, cache in memory. | R35, R37 |
+| `catalog.missal` | Indexed JSON catalogs sourced from the Missal PDF: `prefacio`, `oracao-eucaristica`, `rito-comunhao`, `credo`. Keyword(opening words) → {PT, EN}. (Coleta/Oferendas/Pós-Comunhão moved to `liturgy` below.) | R30, R38, R39, R40, R41 |
+| `liturgy` | On startup, fetch the day's liturgy (readings/psalm/gospel + Coleta/Oferendas/Pós-Comunhão) from Liturgia API v3, cache in memory. | R35, R37, R39a, R39e, R39f |
 | `translate` | Live PT→EN via MyMemory, used only on the unknown/fallback path. Handles failure gracefully. | R4, R9 |
 | `speech` | Serialized speech queue + TTS playback; supports immediate flush/stop. | R5, R9b |
 | `ui` | Minimal: Start/Stop control, status indicator, collapsed debug transcript. Audio-first. | R6, R7, R9b |
@@ -72,9 +72,10 @@ HTTP API.
 ```
 
 ### 3.2 Missal-variant catalog entry (indexed JSON, `catalog.missal`)
-One file per part (`coleta.json`, `prefacio.json`, `oracao-eucaristica.json`,
-`rito-comunhao.json`, `pos-comunhao.json`, `credo.json`). Indexed by a normalized key
-derived from the opening words so lookup is O(1)-ish, not a linear scan (R38 sourcing).
+One file per part (`prefacio.json`, `oracao-eucaristica.json`, `rito-comunhao.json`,
+`credo.json`). Indexed by a normalized key derived from the opening words so lookup is
+O(1)-ish, not a linear scan (R38 sourcing). Coleta/Oferendas/Pós-Comunhão are NOT here
+— see 3.3, they're day-specific and fetched live instead.
 ```
 // oracao-eucaristica.json  (keyed object, not array)
 {
@@ -90,18 +91,26 @@ derived from the opening words so lookup is O(1)-ish, not a linear scan (R38 sou
 ```
 
 ### 3.3 Day liturgy cache (runtime, `liturgy`)
-Fetched from `GET https://liturgia.up.railway.app/v3/{dd-mm-yyyy}` on startup (R37),
-reduced to only what we use (readings/psalm/gospel — R39 scope), each with PT source text
-for the R36 verify step. EN is produced lazily (translate-once-then-cache) the first time
-that reading is matched, OR pre-translated right after fetch — see open design note 6.1.
+Fetched from `GET https://liturgia.up.railway.app/v3/{dd-mm-yyyy}` on startup (R37,
+applying the Saturday Vigil rule from 6.6), reduced to readings/psalm/gospel **plus
+`oracoes.coleta`/`oracoes.oferendas`/`oracoes.comunhao`** (R39a/R39e/R39f — REVISED, see
+spec.md), each with PT source text for the R36 verify step. EN is produced lazily
+(translate-once-then-cache) the first time that item is matched, OR pre-translated
+right after fetch — see open design note 6.1. The `oferendas` entry here is the
+priest's spoken "Oração sobre as Oferendas" after "Orai, irmãos..." (R28) — the
+offertory *hymn* itself stays out of scope, covered separately by the sung-content
+policy (R2).
 ```
 {
   date: "28-06-2026",
-  readings: [
+  dayTexts: [
     { id: "primeira-leitura", ptOpening: "leitura da profecia de ...", ptFull: "...", en: null },
     { id: "salmo",   sung: true },                       // sung → not translated (R20)
     { id: "segunda-leitura", ptOpening: "...", ptFull: "...", en: null },
-    { id: "evangelho", ptOpening: "...", ptFull: "...", en: null }
+    { id: "evangelho", ptOpening: "...", ptFull: "...", en: null },
+    { id: "coleta", ptOpening: "concedei deus todo poderoso que a vossa", ptFull: "...", en: null },
+    { id: "oferendas", ptOpening: "...", ptFull: "...", en: null },
+    { id: "pos-comunhao", ptOpening: "...", ptFull: "...", en: null }
   ]
 }
 ```
@@ -176,6 +185,27 @@ Key points:
 3. **6.3 R8 preface sentence-boundary smoothing** and **6.4 R9 translation-API failure
    handling** remain the two spec-level open requirements; their detailed approach is
    designed at implementation time (buffering strategy / retry+skip+notify respectively).
+4. **6.5 Longest-keyword-match priority.** Some catalog entries have overlapping
+   keywords by design — e.g. `ordinary.json`'s three Memorial Acclamation forms
+   (`misterio-da-fe-a/b/c`): the priest's cue for Forms B and C both start with the
+   same words as Form A's cue ("mistério da fé..."). Matching must check the longest/
+   most specific keyword first and only fall back to a shorter one if no longer match
+   is found, otherwise Form A would incorrectly win every time. Applies to
+   `catalog.ordinary` and `catalog.missal` alike; implement as a single sort-by-length
+   (or explicit priority field) rule in the matcher, not per-entry special-casing.
+5. **6.6 Saturday Vigil readings source.** This parish's Saturday-evening Mass
+   anticipates Sunday, so the day-liturgy fetch (R37) needs different readings on
+   Saturdays depending on what's actually being celebrated that day: if Saturday is
+   itself a Solemnity/Feast/Memorial, use Saturday's own readings (its proper
+   celebration takes precedence); otherwise (an ordinary/ferial Saturday) fetch
+   Sunday's readings instead, since that's what's proclaimed at the vigil. Liturgia
+   API v3 has no structured rank field for this — rank only appears as free text
+   inside the celebration's `liturgia` name (e.g. "Memória Facultativa"), so
+   `liturgyApi.js` does a keyword check (`solenidade`/`festa`/`memoria`) over that
+   string after fetching Saturday's `principal` celebration, falling back to a
+   second fetch for Sunday's date when no rank keyword is found (or Saturday's date
+   has no liturgy at all). Non-Saturday days are unaffected — they fetch their own
+   date as before.
 
 ## 7. Tech Choices (unchanged from spec)
 
