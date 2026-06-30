@@ -116,21 +116,58 @@ variable core (e.g. fixed introduction formula + variable body).
 | R33 | Breves Avisos (announcements) | — | Variable | Always different content; correctly has no fixed entry. No action. |
 | R34 | Bênção Final | — | Fixed | Catalog's `bencao-final` entry already models this reasonably; this bulletin's text matches closely enough. No action, low priority to double check wording exactly. |
 
-## Open Decisions Needed Before Implementing Catalog Changes
-1. **Bulletin tag semantics (blocks R18, R29, R31)**: confirm whether "missal" / "fixo" /
-   "novo missal romano" labels in the bulletin mean "text repeats every week" or just
-   "read from a book, not improvised." Wrong assumption here would cause the app to
-   mis-script prayers that actually change weekly as if they were fixed.
-2. **Hymn handling (R13, R20, R22, R27)**: decide a general policy for sung parts whose
-   melody/refrain structure is known but whose specific lyrics vary or belong to a
-   parish-specific hymnal, separate from the universal Missal text.
-3. **Abbreviated vs. full fixed text (R17, R25)**: decide whether to keep short
-   "trigger + key response line" entries (current style) or fully write out long fixed
-   texts (Gloria, Creed) for completeness.
-4. **Per-Eucharistic-Prayer specificity (R30)**: decide whether to stay generic across
-   Eucharistic Prayer variants or hard-code this parish's specific choice (EP V).
-5. **R26 wording correction**: the Prayer of the Faithful response text in the catalog
-   doesn't match this bulletin's actual refrain — flagged as a needed fix, not yet made.
+## Decisions Resolved (2026-06-30, second round)
+
+1. **Bulletin tag semantics (resolves R18, R29, R31) — RESOLVED**: "missal" and "novo
+   missal romano" mark prayers that ARE fixed text — they don't change year to year for
+   a given liturgical day, they're proper-to-the-day-but-fixed, not improvised or
+   variable in the sense of "different every time." Decision: these SHOULD be
+   pre-translated, but keyed to the day's specific liturgy (the Collect for the 10th
+   Sunday in Ordinary Time, Year A, is always the same text, but differs from the
+   Collect for other Sundays). **This changes the architecture**: unlike the Ordinary
+   parts (one fixed catalog entry, same every week), these need a **calendar-aware
+   lookup** — see new requirement R35 below.
+2. **Hymn handling (resolves R13, R20, R22's variable verse, R27) — RESOLVED**: do not
+   translate sung/hymn content at all (entrance hymn, psalm verses, Gospel acclamation's
+   variable verse, this parish's offertory hymn). No fixed entries, no live-translation
+   attempts for these. The app should simply stay quiet/idle through music.
+3. **Abbreviated vs. full fixed text (resolves R17, R25) — RESOLVED**:
+   - Gloria: always sung, but it's official fixed Ordinary text (not a parish hymn) —
+     translate fully (not abbreviated), since decision #2 above is about parish/day
+     hymns, not the Ordinary's own sung texts.
+   - Creed: the assembly normally uses the **abbreviated Creed** (Apostles' Creed,
+     "Creio em Deus Pai todo-poderoso...") — keep as the default fixed entry. On
+     liturgical solemnities the **longer Nicene Creed** is used instead
+     ("Creio em um só Deus, Pai todo-poderoso, criador do céu e da terra, do universo
+     visível e invisível...") — distinguishable by its different opening words, so it
+     needs its own separate fixed catalog entry (own keywords + own full EN text), not
+     a variant of the same entry.
+4. **Eucharistic Prayer specificity (resolves R30) — RESOLVED**: keep using whichever
+   Eucharistic Prayer is printed in the missal/bulletin for that day (this parish
+   currently uses EP V) and attempt to pre-translate it fully, fixed — same logic as
+   decision #1: these are fixed texts (one of a known, finite set in the Missal), not
+   ad-libbed, so worth scripting properly rather than relying only on generic
+   cross-prayer keywords (Santo, consecration words) as today.
+5. **R26 (Prayer of the Faithful response) — RESOLVED, no fix needed**: the response
+   text is already shown in Portuguese on the datashow, and it's short enough that the
+   worshipper can read and say it in Portuguese directly — no audio translation needed
+   for this specific response. Deprioritized, not a defect.
+
+## New Requirement Surfaced by Decision #1 and #4
+
+| ID | Requirement | Status |
+|----|-------------|--------|
+| R35 | The app SHALL be able to look up and pre-translate the liturgical-day-specific fixed prayers (Coleta/Opening Prayer, Oração sobre as Oferendas, Oração Depois da Comunhão) and the parish's chosen Eucharistic Prayer (currently EP V), keyed to the calendar date / liturgical day, rather than relying on live translation for these. | **Open — needs a data source.** These texts are not in `liturgy.js` today and are not generic across weeks like the Ordinary parts. Needs a content source (e.g. transcribing each week's bulletin in advance, or a liturgical-calendar API/database of the Roman Missal's propers) — this is a content/data-sourcing problem as much as a code one, and should be scoped as its own design discussion before implementation (where do the day's texts come from, who maintains them, how far in advance). |
+
+## Still-Open Decisions
+- **R35 data source**: how do we obtain each Sunday's Coleta / Oração sobre as
+  Oferendas / Oração Depois da Comunhão / Eucharistic Prayer V text in machine-readable
+  form, ahead of time, so it can be pre-translated and ready before Mass starts? (e.g.
+  manual weekly transcription from the bulletin vs. an existing liturgical text
+  database/API.)
+- **Long Creed catalog entry**: needs its own full English translation authored
+  (Nicene Creed, standard ICEL/CNBB English text) before it can be added — not yet
+  written.
 
 ## Success Metrics (manual, prototype stage)
 - A volunteer who doesn't speak Portuguese can sit through one full Mass with the app
