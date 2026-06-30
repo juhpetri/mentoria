@@ -1,0 +1,163 @@
+{
+  "sinal-da-cruz": {
+    "id": "sinal-da-cruz",
+    "keywords": [
+      "em nome do pai e do filho e do espirito santo"
+    ],
+    "titleEn": "Sign of the Cross",
+    "textEn": "In the name of the Father, and of the Son, and of the Holy Spirit. — Amen.",
+    "explanation": "Opens the Mass. The whole assembly responds 'Amen' together."
+  },
+  "saudacao-celebrante": {
+    "id": "saudacao-celebrante",
+    "keywords": [
+      "o senhor esteja convosco",
+      "estejam convosco",
+      "a graca de nosso senhor jesus cristo"
+    ],
+    "titleEn": "Greeting dialogue (recurs throughout Mass)",
+    "textEn": "Priest: \"The Lord be with you.\" — Your response: \"And with your spirit.\"",
+    "explanation": "This exact exchange repeats at several moments (opening greeting, before the Gospel, before the Preface, before the final blessing) — the assembly's response is always the same."
+  },
+  "oremos": {
+    "id": "oremos",
+    "keywords": [
+      "oremos"
+    ],
+    "titleEn": "Let us pray",
+    "textEn": "Let us pray.",
+    "explanation": "Cue said before the Collect, the prayer over the offerings, and the prayer after Communion — the prayer text itself is proper to the day and is translated live, not pre-scripted."
+  },
+  "evangelho-anuncio": {
+    "id": "evangelho-anuncio",
+    "keywords": [
+      "proclamacao do evangelho de jesus cristo segundo",
+      "evangelho de nosso senhor jesus cristo segundo"
+    ],
+    "titleEn": "Gospel announcement",
+    "textEn": "Priest: \"A reading from the holy Gospel.\" — Your response: \"Glory to you, O Lord.\"",
+    "explanation": "Said standing, with a small sign of the cross on forehead, lips, and heart. The Gospel text itself that follows is translated live."
+  },
+  "evangelho-conclusao": {
+    "id": "evangelho-conclusao",
+    "keywords": [
+      "palavra da salvacao"
+    ],
+    "titleEn": "Gospel conclusion",
+    "textEn": "Priest: \"The Gospel of the Lord.\" — Your response: \"Praise to you, Lord Jesus Christ.\"",
+    "explanation": "Closes the Gospel reading."
+  },
+  "orai-irmaos": {
+    "id": "orai-irmaos",
+    "keywords": [
+      "orai irmaos e irmas",
+      "orai irmaos para que o meu e o vosso sacrificio"
+    ],
+    "titleEn": "Pray, brethren",
+    "textEn": "Priest: \"Pray, brethren (brothers and sisters), that my sacrifice and yours may be acceptable to God, the almighty Father.\" — Your response: \"May the Lord accept the sacrifice at your hands for the praise and glory of his name, for our good and the good of all his holy Church.\"",
+    "explanation": "Said as the priest prepares the gifts at the altar, before the Prayer over the Offerings."
+  },
+  "prefacio-dialogo": {
+    "id": "prefacio-dialogo",
+    "keywords": [
+      "coracoes ao alto",
+      "demos gracas ao senhor nosso deus"
+    ],
+    "titleEn": "Preface dialogue",
+    "textEn": "Priest: \"Lift up your hearts.\" — Your response: \"We lift them up to the Lord.\" Priest: \"Let us give thanks to the Lord our God.\" — Your response: \"It is right and just.\"",
+    "explanation": "Fixed opening dialogue before every Preface, regardless of which Preface text follows (the variable Preface body is handled separately)."
+  },
+  "santo": {
+    "id": "santo",
+    "keywords": [
+      "santo santo santo senhor deus do universo"
+    ],
+    "titleEn": "Holy, Holy, Holy (Sanctus)",
+    "textEn": "Holy, Holy, Holy Lord God of hosts. Heaven and earth are full of your glory. Hosanna in the highest. Blessed is he who comes in the name of the Lord. Hosanna in the highest.",
+    "explanation": "Sung or recited by the whole assembly together, right after the Preface."
+  },
+  "misterio-da-fe": {
+    "id": "misterio-da-fe",
+    "keywords": [
+      "eis o misterio da fe"
+    ],
+    "titleEn": "Memorial Acclamation",
+    "textEn": "We proclaim your Death, O Lord, and profess your Resurrection until you come again.",
+    "explanation": "The assembly's acclamation right after the consecration. The priest may use one of a few authorized forms; this is the most common one used here."
+  },
+  "grande-amem": {
+    "id": "grande-amem",
+    "keywords": [
+      "por cristo com cristo e em cristo"
+    ],
+    "titleEn": "Great Amen",
+    "textEn": "Amen.",
+    "explanation": "The assembly's solemn 'Amen' closing the Eucharistic Prayer's final doxology."
+  },
+  "pai-nosso": {
+    "id": "pai-nosso",
+    "keywords": [
+      "pai nosso que estais nos ceus"
+    ],
+    "titleEn": "The Lord's Prayer",
+    "textEn": "Our Father, who art in heaven, hallowed be thy name; thy kingdom come, thy will be done on earth as it is in heaven. Give us this day our daily bread, and forgive us our trespasses, as we forgive those who trespass against us; and lead us not into temptation, but deliver us from evil.",
+    "explanation": "Said or sung by the whole assembly together."
+  },
+  "doxologia-pai-nosso": {
+    "id": "doxologia-pai-nosso",
+    "keywords": [
+      "vosso e o reino o poder e a gloria"
+    ],
+    "titleEn": "Doxology response",
+    "textEn": "For the kingdom, the power and the glory are yours, now and for ever.",
+    "explanation": "The assembly's response after the priest's embolism following the Lord's Prayer."
+  },
+  "saudacao-paz": {
+    "id": "saudacao-paz",
+    "keywords": [
+      "a paz do senhor esteja sempre convosco"
+    ],
+    "titleEn": "Sign of Peace",
+    "textEn": "Priest: \"The peace of the Lord be with you always.\" — Your response: \"And with your spirit.\"",
+    "explanation": "Precedes the exchange of a sign of peace with those nearby."
+  },
+  "cordeiro-de-deus": {
+    "id": "cordeiro-de-deus",
+    "keywords": [
+      "cordeiro de deus que tirais o pecado do mundo"
+    ],
+    "titleEn": "Lamb of God (Agnus Dei)",
+    "textEn": "Lamb of God, you take away the sins of the world, have mercy on us. Lamb of God, you take away the sins of the world, have mercy on us. Lamb of God, you take away the sins of the world, grant us peace.",
+    "explanation": "Said or sung by the whole assembly while the host is broken, before Communion."
+  },
+  "convite-comunhao": {
+    "id": "convite-comunhao",
+    "keywords": [
+      "felizes os convidados para a ceia do senhor",
+      "eis o cordeiro de deus que tira o pecado do mundo"
+    ],
+    "titleEn": "Invitation to Communion",
+    "textEn": "Priest: \"Behold the Lamb of God, behold him who takes away the sins of the world. Blessed are those called to the supper of the Lamb.\" — Your response: \"Lord, I am not worthy that you should enter under my roof, but only say the word and my soul shall be healed.\"",
+    "explanation": "Said by the priest holding up the host, just before Communion is distributed."
+  },
+  "despedida": {
+    "id": "despedida",
+    "keywords": [
+      "ide em paz",
+      "a missa terminou",
+      "podeis ir em paz"
+    ],
+    "titleEn": "Dismissal",
+    "textEn": "Priest: \"Go in peace.\" — Your response: \"Thanks be to God.\"",
+    "explanation": "Closes the Mass. Wording varies slightly (a few authorized forms exist); the response is always the same."
+  },
+  "bencao-final": {
+    "id": "bencao-final",
+    "keywords": [
+      "abencoe vos deus todo poderoso"
+    ],
+    "titleEn": "Final Blessing",
+    "textEn": "Priest: \"May almighty God bless you, the Father, and the Son, and the Holy Spirit.\" — Your response: \"Amen.\"",
+    "explanation": "Simple Trinitarian form of the final blessing, just before the dismissal."
+  }
+}
