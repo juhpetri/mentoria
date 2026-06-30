@@ -7,55 +7,80 @@ import { translatePtToEn } from './translate.js';
 const BASE_URL = 'https://liturgia.up.railway.app/v3/';
 const OPENING_WORDS_COUNT = 6;
 
-function todayPath(date = new Date()) {
-  const dd = String(date.getDate()).padStart(2, '0');
-  const mm = String(date.getMonth() + 1).padStart(2, '0');
-  const yyyy = date.getFullYear();
-  return `${dd}-${mm}-${yyyy}`;
+// The API has no structured liturgical-rank field; rank (Solenidade/Festa/
+// Memória vs. an ordinary weekday) only shows up as free text inside the
+// celebration's `liturgia` name, e.g. "Santíssimo Nome de Jesus. Memória
+// Facultativa". This keyword check is a heuristic over that text.
+const RANK_KEYWORDS = ['solenidade', 'festa', 'memoria'];
+
+function pad2(n) {
+  return String(n).padStart(2, '0');
+}
+
+function datePath(date) {
+  return `${pad2(date.getDate())}-${pad2(date.getMonth() + 1)}-${date.getFullYear()}`;
+}
+
+function addDays(date, days) {
+  const d = new Date(date);
+  d.setDate(d.getDate() + days);
+  return d;
 }
 
 function openingWords(text, count = OPENING_WORDS_COUNT) {
   return normalize(text).split(' ').slice(0, count).join(' ');
 }
 
-// The exact field names of the Liturgia API v3 response are assumed from
-// its README, not yet confirmed against a live call — if they differ,
-// readings just end up empty and the app fails open to live translation
-// (same as a 404), never crashes. Needs real-API verification (T8.2).
+// On days with more than one celebration, only one has principal: true
+// (the others are optional alternatives, e.g. an optional memorial).
+function pickPrincipal(celebracoes) {
+  if (!Array.isArray(celebracoes) || celebracoes.length === 0) return null;
+  return celebracoes.find((c) => c.principal) ?? celebracoes[0];
+}
+
+function hasSpecialRank(celebration) {
+  const name = normalize(celebration?.liturgia ?? '');
+  return RANK_KEYWORDS.some((kw) => name.includes(kw));
+}
+
+// celebration.leituras is an ordered array of { tipo, rotulo, opcoes }; each
+// reading's actual text lives in opcoes[0].texto (opcoes can hold more than
+// one option for days with alternate readings — we only need the one
+// actually proclaimed, so the first/default option is enough for R36).
 function extractReadings(celebration) {
   if (!celebration) return [];
   const readings = [];
-  const leituras = celebration.leituras ?? {};
 
-  if (leituras.primeiraLeitura?.texto) {
-    readings.push({
-      id: 'primeira-leitura',
-      ptOpening: openingWords(leituras.primeiraLeitura.texto),
-      ptFull: leituras.primeiraLeitura.texto,
-      en: null,
-      sung: false,
-    });
-  }
-  if (leituras.salmo) {
-    readings.push({ id: 'salmo', sung: true }); // sung -> stay quiet (R20)
-  }
-  if (leituras.segundaLeitura?.texto) {
-    readings.push({
-      id: 'segunda-leitura',
-      ptOpening: openingWords(leituras.segundaLeitura.texto),
-      ptFull: leituras.segundaLeitura.texto,
-      en: null,
-      sung: false,
-    });
-  }
-  if (leituras.evangelho?.texto) {
-    readings.push({
-      id: 'evangelho',
-      ptOpening: openingWords(leituras.evangelho.texto),
-      ptFull: leituras.evangelho.texto,
-      en: null,
-      sung: false,
-    });
+  for (const item of celebration.leituras ?? []) {
+    const opcao = item.opcoes?.[0];
+    if (!opcao?.texto) continue;
+
+    if (item.tipo === 'salmo') {
+      readings.push({ id: 'salmo', sung: true }); // sung -> stay quiet (R20)
+      continue;
+    }
+    if (item.tipo === 'leitura') {
+      const isSecond = normalize(item.rotulo ?? '').includes('segunda');
+      readings.push({
+        id: isSecond ? 'segunda-leitura' : 'primeira-leitura',
+        ptOpening: openingWords(opcao.texto),
+        ptFull: opcao.texto,
+        en: null,
+        sung: false,
+      });
+      continue;
+    }
+    if (item.tipo === 'evangelho') {
+      readings.push({
+        id: 'evangelho',
+        ptOpening: openingWords(opcao.texto),
+        ptFull: opcao.texto,
+        en: null,
+        sung: false,
+      });
+    }
+    // 'extra' readings (alternate options) intentionally skipped — R36
+    // only needs to identify what's actually proclaimed at this Mass.
   }
   return readings;
 }
@@ -63,15 +88,25 @@ function extractReadings(celebration) {
 export function createLiturgyCache() {
   let readings = [];
 
+  async function fetchCelebration(date) {
+    const res = await fetch(`${BASE_URL}${datePath(date)}`);
+    if (!res.ok) return null; // 404/error -> caller decides fallback
+    const data = await res.json();
+    return pickPrincipal(data?.celebracoes);
+  }
+
+  // Saturday Vigil rule: this parish's Saturday Mass anticipates Sunday, so
+  // a plain/ferial Saturday borrows Sunday's readings. A Saturday that is
+  // itself a Solemnity/Feast/Memorial keeps its own day's readings instead.
   async function fetchToday() {
     try {
-      const res = await fetch(`${BASE_URL}${todayPath()}`);
-      if (!res.ok) {
-        readings = []; // 404/error -> run fully live, no crash (R37)
-        return;
+      const today = new Date();
+      let celebration = await fetchCelebration(today);
+
+      if (today.getDay() === 6 && (!celebration || !hasSpecialRank(celebration))) {
+        celebration = await fetchCelebration(addDays(today, 1)); // Sunday
       }
-      const data = await res.json();
-      const celebration = Array.isArray(data) ? data[0] : data;
+
       readings = extractReadings(celebration);
     } catch (err) {
       console.warn('[liturgyApi] startup fetch failed, running fully live', err);

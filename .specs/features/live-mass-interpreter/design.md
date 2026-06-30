@@ -184,6 +184,19 @@ Key points:
    is found, otherwise Form A would incorrectly win every time. Applies to
    `catalog.ordinary` and `catalog.missal` alike; implement as a single sort-by-length
    (or explicit priority field) rule in the matcher, not per-entry special-casing.
+5. **6.6 Saturday Vigil readings source.** This parish's Saturday-evening Mass
+   anticipates Sunday, so the day-liturgy fetch (R37) needs different readings on
+   Saturdays depending on what's actually being celebrated that day: if Saturday is
+   itself a Solemnity/Feast/Memorial, use Saturday's own readings (its proper
+   celebration takes precedence); otherwise (an ordinary/ferial Saturday) fetch
+   Sunday's readings instead, since that's what's proclaimed at the vigil. Liturgia
+   API v3 has no structured rank field for this — rank only appears as free text
+   inside the celebration's `liturgia` name (e.g. "Memória Facultativa"), so
+   `liturgyApi.js` does a keyword check (`solenidade`/`festa`/`memoria`) over that
+   string after fetching Saturday's `principal` celebration, falling back to a
+   second fetch for Sunday's date when no rank keyword is found (or Saturday's date
+   has no liturgy at all). Non-Saturday days are unaffected — they fetch their own
+   date as before.
 
 ## 7. Tech Choices (unchanged from spec)
 
