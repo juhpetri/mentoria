@@ -131,10 +131,16 @@ variable core (e.g. fixed introduction formula + variable body).
    translate sung/hymn content at all (entrance hymn, psalm verses, Gospel acclamation's
    variable verse, this parish's offertory hymn). No fixed entries, no live-translation
    attempts for these. The app should simply stay quiet/idle through music.
-3. **Abbreviated vs. full fixed text (resolves R17, R25) — RESOLVED**:
-   - Gloria: always sung, but it's official fixed Ordinary text (not a parish hymn) —
-     translate fully (not abbreviated), since decision #2 above is about parish/day
-     hymns, not the Ordinary's own sung texts.
+3. **Abbreviated vs. full fixed text (resolves R17, R25) — RESOLVED, correcting an
+   earlier note**:
+   - Gloria: **cantado — não traduzir**, same as the sung/hymn policy in decision #2.
+     Earlier in this doc it was reasoned that because the Gloria is official fixed
+     Ordinary text it should be translated fully despite being sung — the user
+     corrected this: it stays untranslated, full stop, regardless of whether the text
+     is "official" or not. The existing `gloria` entry in `liturgy.js` (which currently
+     speaks an English line when matched) is now out of date with this decision and
+     should be removed/disabled when catalog code changes are implemented — flagged
+     here, not yet done, per "spec first, no code" instruction.
    - Creed: the assembly normally uses the **abbreviated Creed** (Apostles' Creed,
      "Creio em Deus Pai todo-poderoso...") — keep as the default fixed entry. On
      liturgical solemnities the **longer Nicene Creed** is used instead
