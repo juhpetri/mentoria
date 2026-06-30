@@ -1,17 +1,17 @@
 // Loads catalog.ordinary + catalog.missal JSON files into one flat, sorted
 // list for matching. (R2, R30, R38)
 //
-// Files listed here that don't exist yet (most of the Missal catalogs are
-// still pending transcription from the user's Missal PDF) are skipped
-// silently — the app runs fine with a partial catalog.
+// Coleta and Pós-Comunhão are NOT here — those are day-specific and now
+// sourced live from the Liturgia API (see liturgyApi.js, R39a/R39f), not
+// transcribed from the Missal PDF. Files listed here that don't exist yet
+// (the remaining Missal catalogs are still pending transcription) are
+// skipped silently — the app runs fine with a partial catalog.
 const CATALOG_FILES = [
   { path: 'data/ordinary.json', source: 'ordinary' },
   { path: 'data/missal/credo.json', source: 'missal:credo' },
-  { path: 'data/missal/coleta.json', source: 'missal:coleta' },
   { path: 'data/missal/prefacio.json', source: 'missal:prefacio' },
   { path: 'data/missal/oracao-eucaristica.json', source: 'missal:oracao-eucaristica' },
   { path: 'data/missal/rito-comunhao.json', source: 'missal:rito-comunhao' },
-  { path: 'data/missal/pos-comunhao.json', source: 'missal:pos-comunhao' },
 ];
 
 async function loadOneCatalog({ path, source }) {

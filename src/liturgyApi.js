@@ -1,6 +1,9 @@
-// Fetch + cache the day's readings/psalm/Gospel from Liturgia API v3.
-// (R35, R37) Verify-before-trust matching, fail-open to live translation
-// if nothing matches. (R36)
+// Fetch + cache the day's readings/psalm/Gospel AND the day-specific Coleta
+// + Oração Pós-Comunhão from Liturgia API v3 — no Missal-photo transcription
+// needed for these, the API already supplies them per day. (R35, R37, R39a,
+// R39f) Verify-before-trust matching, fail-open to live translation if
+// nothing matches. (R36) Oferendas is intentionally NOT extracted: this
+// parish always prays it silently (R39e).
 import { normalize } from './normalize.js';
 import { translatePtToEn } from './translate.js';
 
@@ -43,50 +46,48 @@ function hasSpecialRank(celebration) {
   return RANK_KEYWORDS.some((kw) => name.includes(kw));
 }
 
+function pushDayText(list, id, text) {
+  if (!text) return;
+  list.push({ id, ptOpening: openingWords(text), ptFull: text, en: null, sung: false });
+}
+
 // celebration.leituras is an ordered array of { tipo, rotulo, opcoes }; each
 // reading's actual text lives in opcoes[0].texto (opcoes can hold more than
 // one option for days with alternate readings — we only need the one
 // actually proclaimed, so the first/default option is enough for R36).
-function extractReadings(celebration) {
+// celebration.oracoes.{coleta,comunhao} are added the same way (R39a/R39f).
+function extractDayTexts(celebration) {
   if (!celebration) return [];
-  const readings = [];
+  const items = [];
 
   for (const item of celebration.leituras ?? []) {
     const opcao = item.opcoes?.[0];
     if (!opcao?.texto) continue;
 
     if (item.tipo === 'salmo') {
-      readings.push({ id: 'salmo', sung: true }); // sung -> stay quiet (R20)
+      items.push({ id: 'salmo', sung: true }); // sung -> stay quiet (R20)
       continue;
     }
     if (item.tipo === 'leitura') {
       const isSecond = normalize(item.rotulo ?? '').includes('segunda');
-      readings.push({
-        id: isSecond ? 'segunda-leitura' : 'primeira-leitura',
-        ptOpening: openingWords(opcao.texto),
-        ptFull: opcao.texto,
-        en: null,
-        sung: false,
-      });
+      pushDayText(items, isSecond ? 'segunda-leitura' : 'primeira-leitura', opcao.texto);
       continue;
     }
     if (item.tipo === 'evangelho') {
-      readings.push({
-        id: 'evangelho',
-        ptOpening: openingWords(opcao.texto),
-        ptFull: opcao.texto,
-        en: null,
-        sung: false,
-      });
+      pushDayText(items, 'evangelho', opcao.texto);
     }
     // 'extra' readings (alternate options) intentionally skipped — R36
     // only needs to identify what's actually proclaimed at this Mass.
   }
-  return readings;
+
+  pushDayText(items, 'coleta', celebration.oracoes?.coleta);
+  pushDayText(items, 'pos-comunhao', celebration.oracoes?.comunhao);
+
+  return items;
 }
 
 export function createLiturgyCache() {
-  let readings = [];
+  let dayTexts = [];
 
   async function fetchCelebration(date) {
     const res = await fetch(`${BASE_URL}${datePath(date)}`);
@@ -107,20 +108,21 @@ export function createLiturgyCache() {
         celebration = await fetchCelebration(addDays(today, 1)); // Sunday
       }
 
-      readings = extractReadings(celebration);
+      dayTexts = extractDayTexts(celebration);
     } catch (err) {
       console.warn('[liturgyApi] startup fetch failed, running fully live', err);
-      readings = [];
+      dayTexts = [];
     }
   }
 
   // Binary found-or-not match against the live transcript's opening words.
-  // No similarity scoring (R36).
+  // No similarity scoring (R36). Covers readings, Coleta, and Pós-Comunhão
+  // alike — they're all just { ptOpening, ptFull } entries here.
   function matchReading(normalizedText) {
-    for (const reading of readings) {
-      if (reading.sung || !reading.ptOpening) continue;
-      if (normalizedText.includes(reading.ptOpening) || reading.ptOpening.includes(normalizedText)) {
-        return reading;
+    for (const item of dayTexts) {
+      if (item.sung || !item.ptOpening) continue;
+      if (normalizedText.includes(item.ptOpening) || item.ptOpening.includes(normalizedText)) {
+        return item;
       }
     }
     return null;
