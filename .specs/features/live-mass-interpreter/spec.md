@@ -83,6 +83,55 @@ time, synchronized closely enough with the live celebration to respond when expe
   microphone picks up as Portuguese speech. A noisy church or someone else's voice can
   trigger a false match or feed garbage into translation.
 
+## Full Catalog Review — against "O Povo de Deus" bulletin (Arquidiocese de Brasília)
+
+Cross-checking every part of the bulletin against the catalog. Classification rule:
+**Fixed** = same words every week, safe to pre-script and speak instantly (R3 path).
+**Variable** = content changes weekly even if the structural moment recurs, must go
+through live translation (R4 path). **Mixed** = part has both a fixed shell and a
+variable core (e.g. fixed introduction formula + variable body).
+
+| ID | Bulletin item | Bulletin tag | Classification | Notes / what needs deciding before implementing |
+|----|--------------|--------------|-----------------|---------------------------------------------------|
+| R13 | Canto de Entrada | (sung, no tag shown) | Variable | Entrance hymn changes weekly/by season — no fixed entry; relies on live translation, which will be slow/awkward for sung lyrics. Open question: do we even want to translate hymns, or just stay silent during music and resume on spoken parts? |
+| R14 | Comentário Inicial | — | Variable | Already correctly excluded (R12). No action. |
+| R15 | Invocação Inicial + Saudação Inicial | cantado | Fixed | Already corrected in `liturgy.js` (commit `fbc2c1f`). No further action unless wording drifts. |
+| R16 | Ato Penitencial | cantado | Mixed | Intro line ("Em Jesus Cristo, o Justo...") + 3x "Senhor/Cristo/Senhor, tende piedade" exchange — the exchange itself is universally fixed text, but this bulletin shows an extra priest-led intercession line before each ("Senhor, que ofereceis o vosso perdão a Pedro arrependido...") that is NOT in the current catalog. **Decision needed**: pre-script these intercession lines (they look fixed for this particular penitential form, "Forma C"), or treat the intro lines as variable since multiple Forma-C variants exist in the Missal and the priest may rotate between them? |
+| R17 | Hino do Glória | cantado | Fixed | Catalog already has `gloria`, but only the opening line as keyword/response. Full sung text is much longer — current entry under-represents it. **Decision needed**: expand the spoken/sung response to the full Gloria text, or keep it abbreviated since it's primarily sung (and singing isn't well served by our speech-trigger approach anyway)? |
+| R18 | Coleta (Opening Prayer) | missal | Variable, NOT Fixed | Important correction to my earlier assumption: despite "read from the Missal," the Collect's text is proper to each Sunday/feast — it changes every week. Catalog's existing `oracao-coleta` entry only has the trigger word "Oremos" and a generic "Amém" response — that part (the cue + assembly's Amen) IS fixed and fine to keep, but the prayer body itself must NOT be pre-scripted; it should fall through to live translation. No code is currently mis-scripting this, just flagging so it isn't "fixed" by mistake later. |
+| R19 | Primeira Leitura | leicionário | Variable | Confirmed already correct — `liturgy.js`'s `leitura` entry only fixes the closing "Palavra do Senhor / Graças a Deus" exchange, not the reading body. No action. |
+| R20 | Salmo Responsorial | cantado | Mixed | The refrain ("A todo homem que procede retamente...") repeats several times within one Mass but changes week to week; the verses always change. **Decision needed**: is it worth detecting "the psalm refrain just repeated" as a structural cue (without knowing its specific words in advance) to, e.g., pause/resume translation pacing — or just treat the whole psalm as ordinary variable speech? Currently no entry exists either way (no action taken, just surfacing the question). |
+| R21 | Segunda Leitura | leicionário | Variable | Same as R19 — confirmed correct, no action. |
+| R22 | Aclamação ao Evangelho | cantado | Mixed | "Aleluia, Aleluia, Aleluia" is fixed and could be spoken instantly when detected; the verse between repetitions is proper to the day (variable). Catalog has no entry for the Aleluia acclamation itself yet (only `evangelho` for the Gospel introduction). **Decision needed**: add a fixed "aleluia" entry, given it's a clear, short, highly-recognizable phrase good for keyword matching? |
+| R23 | Evangelho | evangeliário | Mixed | Catalog's `evangelho` entry already correctly covers only the fixed introduction/acclamation formula ("Evangelho de Nosso Senhor Jesus Cristo... Glória a vós, Senhor"), not the Gospel text itself (which is variable and goes to live translation). No action — already modeled correctly. |
+| R24 | Homilia | in live | Variable | Already correctly excluded — no fixed entry, by design (consistent with R12). No action. |
+| R25 | Profissão de Fé (Credo) | fixo | Fixed | Catalog's `credo` entry has the opening line only; full Creed is long. Same decision as R17 (Gloria): expand to full text, or keep abbreviated? |
+| R26 | Oração dos Fiéis | (preces espontâneas noted) | Mixed | Catalog's `oracao-fieis` entry covers the fixed response cue reasonably, but this bulletin shows 4 pre-printed intercessions PLUS a slot for spontaneous ones from the assembly — the response phrase itself ("Salvai, Senhor, ouvi o vosso povo") is fixed and worth keeping; the intercession texts are always variable. Current entry's wording ("Senhor, escutai a nossa oração") doesn't match this bulletin's actual refrain ("Salvai, Senhor, ouvi o vosso povo") — **correction needed** (not yet made; documenting only). |
+| R27 | Apresentação dos Dons | cantado | Conflict to resolve | This parish sings a specific offertory hymn ("Esta mesa santa que preparamos... Oh, recebe, Senhor!") with its own refrain — different from the catalog's current generic liturgical response ("Bendito seja Deus para sempre"). **Decision needed**: which should the app prioritize — the official liturgical dialogue (universal, but not what's actually sung here) or this parish's specific hymn refrain (accurate to here, but only useful for this parish and would need a hymn-keyword catalog of its own)? |
+| R28 | Orai, Irmãos e Irmãs | (tag illegible/inconsistent in source scan) | Fixed | Catalog's `orai-irmaos` entry matches the universal Missal text seen in this bulletin word for word. No action. |
+| R29 | Sobre as Oferendas (Prayer over the Offerings) | fixo | **Likely Variable, tag is misleading** | Same trap as R18 (Coleta): this prayer is proper to the Sunday even though the bulletin labels it "fixo." Needs confirmation — possibly "fixo" in the bulletin's legend means "read fixed from the missal text in front of the priest" (i.e., not improvised) rather than "same text every week." **Decision needed**: clarify what the bulletin's own tags ("fixo"/"missal"/"novo missal romano") actually mean before trusting them as our Fixed/Variable signal — they may track "where the priest reads from," not "does the text repeat." |
+| R30 | Oração Eucarística V | novo missal romano | Fixed (for this specific Eucharistic Prayer) | Catalog's existing `prefacio`/`santo`/`consagracao`/`pai-nosso` entries are written generically across any Eucharistic Prayer. This bulletin shows the parish specifically uses Eucharistic Prayer V (a less common option, distinct text from Prayer I-IV/II commonly assumed). **Decision needed**: keep the generic keyword approach (works across prayers since it matches universal phrases like "Santo, Santo, Santo" / "Isto é o meu Corpo") or author an EP-V-specific script for higher fidelity, accepting it'll misfire if the parish ever uses a different Eucharistic Prayer? |
+| R31 | Depois da Comunhão (Prayer after Communion) | missal | Variable | Same pattern as R18/R29 — proper-to-the-day text despite the "missal" tag. No fixed entry should be created for the prayer body. |
+| R32 | Oração Vocacional | (recited together, no tag) | Likely Fixed | Bulletin text ("Rezemos juntos: Nós vos rogamos, ó Bom Jesus...") reads like a standing prayer this parish recites regularly, not proper to the specific Sunday. **Decision needed**: confirm with the parish whether this prayer is always the same text before adding it as a fixed entry. |
+| R33 | Breves Avisos (announcements) | — | Variable | Always different content; correctly has no fixed entry. No action. |
+| R34 | Bênção Final | — | Fixed | Catalog's `bencao-final` entry already models this reasonably; this bulletin's text matches closely enough. No action, low priority to double check wording exactly. |
+
+## Open Decisions Needed Before Implementing Catalog Changes
+1. **Bulletin tag semantics (blocks R18, R29, R31)**: confirm whether "missal" / "fixo" /
+   "novo missal romano" labels in the bulletin mean "text repeats every week" or just
+   "read from a book, not improvised." Wrong assumption here would cause the app to
+   mis-script prayers that actually change weekly as if they were fixed.
+2. **Hymn handling (R13, R20, R22, R27)**: decide a general policy for sung parts whose
+   melody/refrain structure is known but whose specific lyrics vary or belong to a
+   parish-specific hymnal, separate from the universal Missal text.
+3. **Abbreviated vs. full fixed text (R17, R25)**: decide whether to keep short
+   "trigger + key response line" entries (current style) or fully write out long fixed
+   texts (Gloria, Creed) for completeness.
+4. **Per-Eucharistic-Prayer specificity (R30)**: decide whether to stay generic across
+   Eucharistic Prayer variants or hard-code this parish's specific choice (EP V).
+5. **R26 wording correction**: the Prayer of the Faithful response text in the catalog
+   doesn't match this bulletin's actual refrain — flagged as a needed fix, not yet made.
+
 ## Success Metrics (manual, prototype stage)
 - A volunteer who doesn't speak Portuguese can sit through one full Mass with the app
   running and earphones in, and afterward correctly state when to say "Amen," join the
