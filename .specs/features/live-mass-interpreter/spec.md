@@ -307,7 +307,7 @@ detection + full PT text + full EN text):
 | R39b | Prefácio (Preface) variants | One entry per Preface in the Missal (~81 universally, however many this Missal edition contains) | Open — already scoped in R38, this confirms PT comes from the user's Missal. |
 | R39c | Oração Eucarística (Eucharistic Prayer) variants | One entry per Eucharistic Prayer in the Missal (incl. "Oração V") | Open — already scoped in R38; PT now sourced from the Missal directly, resolving the earlier PT-sourcing gap. EN-for-EP-V gap (no official translation) still stands. |
 | R39d | Rito da Comunhão (Communion Rite) | Fixed dialogue/prayer text in this rite | **Open — new in this message**, not previously scoped as its own catalog (R28 "Orai, irmãos" and the Lamb of God/Communion entries in `liturgy.js` cover fragments of this rite already; needs reconciling what's missing vs. already covered). |
-| R39e | Rito das Oferendas (Offertory Rite) | Fixed dialogue/prayer text in this rite | **Open — new in this message.** Note tension with R27's unresolved decision (this parish sings a specific offertory hymn instead of/alongside the universal dialogue) — needs reconciling which text actually gets used live at this parish before encoding it. |
+| R39e | Rito das Oferendas (Offertory Rite) | ~~Fixed dialogue/prayer text in this rite~~ | **Removed.** This parish always sings an offertory hymn at this moment, never the spoken Missal dialogue — falls under the hymn policy (R2), no catalog entry needed. |
 | R39f | Oração Pós-Comunhão (Prayer after Communion) | One entry per Sunday/feast in the Missal | **Open** — same overlap-with-API note as R39a (Liturgia API already returns "Comunhão" prayer text per day via R35/R37). |
 
 ## R39a/R39f Overlap with the Liturgia API — RESOLVED: no overlap, scope narrowed
@@ -324,10 +324,18 @@ data source now has a single, non-overlapping responsibility:
 - **Missal-transcribed JSON** → Coleta, Prefácio, Oração Eucarística, Rito da Comunhão,
   Rito das Oferendas, Oração Pós-Comunhão (R38/R39).
 
+## R39e vs. R27 — RESOLVED: drop R39e, always sung here
+
+This parish always sings an offertory hymn at this moment — never the spoken universal
+Missal dialogue. Decision: **R39e is not needed.** Apply the hymn policy (R2 — don't
+translate, app stays quiet) for the Rito das Oferendas moment instead of building a
+Missal-JSON catalog entry for it. R39 scope is now: Coleta, Prefácio, Oração
+Eucarística, Rito da Comunhão, Oração Pós-Comunhão (R39e/Oferendas removed).
+
 ## Still-Open Decisions
-- **R39e vs. R27**: this parish's actual sung offertory practice (a specific hymn) vs.
-  the universal Missal dialogue — which is what the live app should expect to hear at
-  that moment, given R2's policy of not translating hymns?
+(none outstanding for R38/R39 sourcing/scope at this point — remaining open items are
+R36's already-resolved fallback logic implementation, the Long Creed text authoring, and
+whatever surfaces next.)
 - **EN sourcing**: still pending — official ICEL/USCCB text where it exists, translated
   where it doesn't (notably EP V, confirmed to have no official English version).
 - **Long Creed catalog entry**: needs its own full English translation authored
