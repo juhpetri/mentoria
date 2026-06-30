@@ -47,6 +47,15 @@
     "textEn": "Priest: \"The Gospel of the Lord.\" — Your response: \"Praise to you, Lord Jesus Christ.\"",
     "explanation": "Closes the Gospel reading."
   },
+  "leitura-conclusao": {
+    "id": "leitura-conclusao",
+    "keywords": [
+      "palavra do senhor"
+    ],
+    "titleEn": "Reading conclusion",
+    "textEn": "Reader: \"The word of the Lord.\" — Your response: \"Thanks be to God.\"",
+    "explanation": "Closes the First Reading and the Second Reading (not the Gospel, which has its own response — see evangelho-conclusao). The reading body itself is translated live."
+  },
   "orai-irmaos": {
     "id": "orai-irmaos",
     "keywords": [
