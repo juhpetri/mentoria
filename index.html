@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Missa em Português — Guia ao Vivo / Live Mass Guide</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header>
+    <h1>🎧 Live Mass Interpreter</h1>
+    <p class="subtitle">Listen to the Mass in English, live — for our brothers and sisters from Ghana</p>
+  </header>
+
+  <main>
+    <section class="controls">
+      <button id="startBtn">🎙️ Start listening</button>
+      <button id="stopBtn" disabled>⏹ Stop</button>
+      <span id="status" class="status">Idle</span>
+    </section>
+
+    <p class="instructions">
+      Put on your earphones. Hold the phone's microphone toward the priest/speakers.
+      You'll <strong>hear</strong> the Mass translated in your ear — fixed parts (greeting,
+      prayers, responses) are spoken instantly; readings and the homily are translated with
+      a small delay, like simultaneous interpretation.
+    </p>
+
+    <section id="currentPart" class="card hidden">
+      <h2 id="partTitleEn">—</h2>
+      <p class="part-title-pt" id="partTitlePt">—</p>
+      <p class="response-en" id="responseEn">—</p>
+      <h3>Why? / Por quê?</h3>
+      <p class="explanation" id="explanation">—</p>
+    </section>
+
+    <details class="card transcript-card">
+      <summary>Debug: what the app is hearing (Portuguese)</summary>
+      <p id="transcript" class="transcript">…</p>
+    </details>
+
+    <section class="card help-card">
+      <p>
+        This app listens to the priest's spoken Portuguese, speaks the known parts of the
+        Mass in English right away, and translates+speaks the readings/homily with a short
+        delay — so you can follow along by ear, like everyone else.
+      </p>
+      <p class="note">
+        Needs microphone permission, works best in Chrome, and use earphones so the
+        translated audio doesn't loop back into the microphone.
+      </p>
+    </section>
+  </main>
+
+  <script src="liturgy.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
