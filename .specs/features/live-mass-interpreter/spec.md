@@ -110,7 +110,7 @@ variable core (e.g. fixed introduction formula + variable body).
 | R27 | Apresentação dos Dons | cantado | Conflict to resolve | This parish sings a specific offertory hymn ("Esta mesa santa que preparamos... Oh, recebe, Senhor!") with its own refrain — different from the catalog's current generic liturgical response ("Bendito seja Deus para sempre"). **Decision needed**: which should the app prioritize — the official liturgical dialogue (universal, but not what's actually sung here) or this parish's specific hymn refrain (accurate to here, but only useful for this parish and would need a hymn-keyword catalog of its own)? |
 | R28 | Orai, Irmãos e Irmãs | (tag illegible/inconsistent in source scan) | Fixed | Catalog's `orai-irmaos` entry matches the universal Missal text seen in this bulletin word for word. No action. |
 | R29 | Sobre as Oferendas (Prayer over the Offerings) | fixo | **Likely Variable, tag is misleading** | Same trap as R18 (Coleta): this prayer is proper to the Sunday even though the bulletin labels it "fixo." Needs confirmation — possibly "fixo" in the bulletin's legend means "read fixed from the missal text in front of the priest" (i.e., not improvised) rather than "same text every week." **Decision needed**: clarify what the bulletin's own tags ("fixo"/"missal"/"novo missal romano") actually mean before trusting them as our Fixed/Variable signal — they may track "where the priest reads from," not "does the text repeat." |
-| R30 | Oração Eucarística V | novo missal romano | Fixed (for this specific Eucharistic Prayer) | Catalog's existing `prefacio`/`santo`/`consagracao`/`pai-nosso` entries are written generically across any Eucharistic Prayer. This bulletin shows the parish specifically uses Eucharistic Prayer V (a less common option, distinct text from Prayer I-IV/II commonly assumed). **Decision needed**: keep the generic keyword approach (works across prayers since it matches universal phrases like "Santo, Santo, Santo" / "Isto é o meu Corpo") or author an EP-V-specific script for higher fidelity, accepting it'll misfire if the parish ever uses a different Eucharistic Prayer? |
+| R30 | Oração Eucarística | novo missal romano | Fixed, but variant must be identified live | Catalog's existing `prefacio`/`santo`/`consagracao`/`pai-nosso` entries are written generically across any Eucharistic Prayer. This specific bulletin happened to show Eucharistic Prayer V, but **the app must not assume a single fixed EP** — see decision #4 (corrected): it must identify, from the priest's opening words, which of the Eucharistic Prayers (I-V, etc.) is being prayed that Mass, the same way Preface variants are identified (R38), and speak the matching pre-authored text. |
 | R31 | Depois da Comunhão (Prayer after Communion) | missal | Variable | Same pattern as R18/R29 — proper-to-the-day text despite the "missal" tag. No fixed entry should be created for the prayer body. |
 | R32 | Oração Vocacional | (recited together, no tag) | Likely Fixed | Bulletin text ("Rezemos juntos: Nós vos rogamos, ó Bom Jesus...") reads like a standing prayer this parish recites regularly, not proper to the specific Sunday. **Decision needed**: confirm with the parish whether this prayer is always the same text before adding it as a fixed entry. |
 | R33 | Breves Avisos (announcements) | — | Variable | Always different content; correctly has no fixed entry. No action. |
@@ -148,16 +148,19 @@ variable core (e.g. fixed introduction formula + variable body).
      visível e invisível...") — distinguishable by its different opening words, so it
      needs its own separate fixed catalog entry (own keywords + own full EN text), not
      a variant of the same entry.
-4. **Eucharistic Prayer specificity (resolves R30) — RESOLVED**: keep using whichever
-   Eucharistic Prayer is printed in the missal/bulletin for that day (this parish
-   currently uses EP V) and attempt to pre-translate it fully, fixed — same logic as
-   decision #1: these are fixed texts (one of a known, finite set in the Missal), not
-   ad-libbed, so worth scripting properly rather than relying only on generic
-   cross-prayer keywords (Santo, consecration words) as today.
-5. **R26 (Prayer of the Faithful response) — RESOLVED, no fix needed**: the response
-   text is already shown in Portuguese on the datashow, and it's short enough that the
-   worshipper can read and say it in Portuguese directly — no audio translation needed
-   for this specific response. Deprioritized, not a defect.
+4. **Eucharistic Prayer specificity (resolves R30) — CORRECTED**: do NOT hardcode a
+   single Eucharistic Prayer (e.g. always EP V). The app must identify, live, **which**
+   Eucharistic Prayer the priest is actually praying that particular Mass (priests may
+   rotate between EP I-V depending on the day/season), the same identify-by-opening-words
+   approach as any other catalog variant (R38). EP V being "currently in use here" was
+   only an observation from one bulletin, not a fixed assumption to build against.
+5. **R26 (Prayer of the Faithful response) — CORRECTED**: never translate or speak any
+   audio for this response, under any circumstance — do not fall back to a "default"
+   response text either, since the exact wording varies by parish/Mass (this bulletin's
+   "Salvai, Senhor, ouvi o vosso povo" is not to be hardcoded as a universal fallback).
+   The response is always shown in Portuguese on the datashow and the worshipper
+   responds in Portuguese directly. This moment is permanently out of scope for audio
+   translation, not just deprioritized.
 
 ## New Requirement Surfaced by Decision #1 and #4
 
@@ -254,7 +257,7 @@ live translation for that one, same fail-open behavor.
 
 | ID | Requirement | Status |
 |----|-------------|--------|
-| R38 | The app SHALL maintain structured JSON catalogs for Preface variants and Eucharistic Prayer variants (separate from `liturgy.js`'s Ordinary catalog), each entry keyed by detection keywords from the variant's opening words, with full PT/EN fixed text, so the specific variant in use can be identified live from the priest's speech and spoken instantly once matched. | **Open — not yet implemented.** Needs: (a) decide file structure/location (e.g. `prefaces.json` + `eucharistic-prayers.json`, or one `variants/` folder), (b) decide initial coverage (start with EP V only, expand later, vs. attempt full coverage from day one), (c) source the official PT/EN texts for each variant to populate the JSON (CNBB Missal for PT, ICEL/USCCB approved English translation for EN). |
+| R38 | The app SHALL maintain structured JSON catalogs for Preface variants and Eucharistic Prayer variants (separate from `liturgy.js`'s Ordinary catalog), each entry keyed by detection keywords from the variant's opening words, with full PT/EN fixed text, so the specific variant in use can be identified live from the priest's speech and spoken instantly once matched — **no variant (e.g. EP V) is assumed as default; the catalog must let the app distinguish between all variants present in the Missal.** | **Open — not yet implemented.** Needs: (a) decide file structure/location (e.g. `prefacio.json` + `oracao-eucaristica.json`, indexed for fast lookup — see R39 sourcing below), (b) decide initial coverage (start with EP V only, expand later, vs. attempt full coverage from day one), (c) source the official PT/EN texts for each variant to populate the JSON (CNBB Missal for PT, ICEL/USCCB approved English translation for EN). |
 
 ## R38 Scope & Sourcing — Decision + Research Findings (2026-06-30)
 
@@ -285,14 +288,28 @@ possible. Research findings change what's actually feasible:
   do have official English versions, being part of the universal Missal) or (b)
   produced via translation (non-official) where it doesn't (EP V specifically).
 
-## R38 Sourcing — RESOLVED: PT from the user's own physical Missal
+## R38 Sourcing — RESOLVED: PT from the user's own Missal (PDF)
 
-The user has a physical copy of the Missal and will use it directly as the
+The user has their Missal as a **PDF** and will use it directly as the
 **authoritative PT source** for transcription, rather than the scattered PDFs/blogs
 found in research. This replaces "manual PT curation from web sources" with "manual PT
-transcription from the user's own Missal" — same effort shape (manual, one-time, then
-static JSON), more authoritative source. EN sourcing question (official ICEL/USCCB text
-where it exists vs. translated where it doesn't, e.g. EP V) remains as decided.
+transcription from the user's own Missal PDF" — same effort shape (manual, one-time,
+then static JSON), more authoritative source. EN sourcing question (official ICEL/USCCB
+text where it exists vs. translated where it doesn't, e.g. EP V) remains as decided.
+
+**File structure — RESOLVED**: one separate, indexed JSON file per catalog (not one
+combined file), so lookup at runtime is fast and each file stays independently
+reviewable/maintainable:
+- `coleta.json`
+- `prefacio.json`
+- `oracao-eucaristica.json`
+- `rito-comunhao.json`
+- `pos-comunhao.json`
+
+Each file's entries are indexed (e.g. by a normalized-keyword key, not a linear array
+scan) so identifying which variant the priest is reading from is fast even as the
+catalogs grow to cover the Missal's full set of options (all Prefaces, all Eucharistic
+Prayers, etc.) — consistent with R36's identify-or-fail-open matching strategy.
 
 ## R39 — New Requirement: Full Structured JSON Catalogs from the Physical Missal
 
