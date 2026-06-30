@@ -1,9 +1,8 @@
-// Fetch + cache the day's readings/psalm/Gospel AND the day-specific Coleta
-// + Oração Pós-Comunhão from Liturgia API v3 — no Missal-photo transcription
-// needed for these, the API already supplies them per day. (R35, R37, R39a,
-// R39f) Verify-before-trust matching, fail-open to live translation if
-// nothing matches. (R36) Oferendas is intentionally NOT extracted: this
-// parish always prays it silently (R39e).
+// Fetch + cache the day's readings/psalm/Gospel AND the day-specific Coleta,
+// Oração sobre as Oferendas, and Oração Pós-Comunhão from Liturgia API v3 —
+// no Missal-photo transcription needed for these, the API already supplies
+// them per day. (R35, R37, R39a, R39e, R39f) Verify-before-trust matching,
+// fail-open to live translation if nothing matches. (R36)
 import { normalize } from './normalize.js';
 import { translatePtToEn } from './translate.js';
 
@@ -55,7 +54,8 @@ function pushDayText(list, id, text) {
 // reading's actual text lives in opcoes[0].texto (opcoes can hold more than
 // one option for days with alternate readings — we only need the one
 // actually proclaimed, so the first/default option is enough for R36).
-// celebration.oracoes.{coleta,comunhao} are added the same way (R39a/R39f).
+// celebration.oracoes.{coleta,oferendas,comunhao} are added the same way
+// (R39a/R39e/R39f).
 function extractDayTexts(celebration) {
   if (!celebration) return [];
   const items = [];
@@ -81,6 +81,7 @@ function extractDayTexts(celebration) {
   }
 
   pushDayText(items, 'coleta', celebration.oracoes?.coleta);
+  pushDayText(items, 'oferendas', celebration.oracoes?.oferendas);
   pushDayText(items, 'pos-comunhao', celebration.oracoes?.comunhao);
 
   return items;
@@ -116,8 +117,8 @@ export function createLiturgyCache() {
   }
 
   // Binary found-or-not match against the live transcript's opening words.
-  // No similarity scoring (R36). Covers readings, Coleta, and Pós-Comunhão
-  // alike — they're all just { ptOpening, ptFull } entries here.
+  // No similarity scoring (R36). Covers readings, Coleta, Oferendas, and
+  // Pós-Comunhão alike — they're all just { ptOpening, ptFull } entries here.
   function matchReading(normalizedText) {
     for (const item of dayTexts) {
       if (item.sung || !item.ptOpening) continue;

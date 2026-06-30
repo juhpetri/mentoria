@@ -315,7 +315,7 @@ reviewable/maintainable:
 - `oracao-eucaristica.json`
 - `rito-comunhao.json`
 
-(`coleta.json`/`pos-comunhao.json` dropped from this list — see "R39a/R39f Sourcing —
+(`coleta.json`/`pos-comunhao.json` dropped from this list — see "R39a/R39e/R39f Sourcing —
 REVISED": those two are now fetched live from the Liturgia API instead of transcribed.)
 
 Each file's entries are indexed (e.g. by a normalized-keyword key, not a linear array
@@ -332,12 +332,12 @@ detection + full PT text + full EN text):
 
 | ID | Catalog | Scope | Status |
 |----|---------|-------|--------|
-| R39a | Coleta (Opening Prayer) variants | Sourced live from the Liturgia API per day, not transcribed | **Done** — see "R39a/R39f Sourcing — REVISED" below; no Missal photos needed for this one. |
+| R39a | Coleta (Opening Prayer) variants | Sourced live from the Liturgia API per day, not transcribed | **Done** — see "R39a/R39e/R39f Sourcing — REVISED" below; no Missal photos needed for this one. |
 | R39b | Prefácio (Preface) variants | One entry per Preface in the Missal (~81 universally, however many this Missal edition contains) | Open — already scoped in R38, this confirms PT comes from the user's Missal. |
 | R39c | Oração Eucarística (Eucharistic Prayer) variants | One entry per Eucharistic Prayer in the Missal (incl. "Oração V") | Open — already scoped in R38; PT now sourced from the Missal directly, resolving the earlier PT-sourcing gap. EN-for-EP-V gap (no official translation) still stands. |
 | R39d | Rito da Comunhão (Communion Rite) | Fixed dialogue/prayer text in this rite | **Open — new in this message**, not previously scoped as its own catalog (R28 "Orai, irmãos" and the Lamb of God/Communion entries in `liturgy.js` cover fragments of this rite already; needs reconciling what's missing vs. already covered). |
-| R39e | Rito das Oferendas (Offertory Rite) | ~~Fixed dialogue/prayer text in this rite~~ | **Removed.** This parish always sings an offertory hymn at this moment, never the spoken Missal dialogue — falls under the hymn policy (R2), no catalog entry needed. |
-| R39f | Oração Pós-Comunhão (Prayer after Communion) | Sourced live from the Liturgia API per day, not transcribed | **Done** — see "R39a/R39f Sourcing — REVISED" below; no Missal photos needed for this one. |
+| R39e | Oração sobre as Oferendas (Prayer over the Offerings) | Sourced live from the Liturgia API per day, not transcribed | **Done** — see "R39a/R39e/R39f Sourcing — REVISED" below; distinct from the *sung* offertory hymn moment (still covered by the hymn policy, R2, no catalog entry needed for that part). |
+| R39f | Oração Pós-Comunhão (Prayer after Communion) | Sourced live from the Liturgia API per day, not transcribed | **Done** — see "R39a/R39e/R39f Sourcing — REVISED" below; no Missal photos needed for this one. |
 
 ## R39a/R39f Overlap with the Liturgia API — SUPERSEDED, see below
 
@@ -346,33 +346,41 @@ detection + full PT text + full EN text):
 post-Communion prayer, despite the API's response technically including those fields
 (per the R35 README research). Decision: ignore the API's Coleta/Oferendas/Comunhão
 fields entirely; those three come **exclusively** from the user's Missal-transcribed
-JSON (R39a, R39e, R39f).~~ Reversed — see "R39a/R39f Sourcing — REVISED" below: avoiding
-manual Missal-photo transcription for these two day-specific prayers outweighs the
+JSON (R39a, R39e, R39f).~~ Reversed — see "R39a/R39e/R39f Sourcing — REVISED" below:
+avoiding manual Missal-photo transcription for these day-specific prayers outweighs the
 small drift risk, since R36's verify-before-trust check already guards against a
 mismatch (e.g. wrong edition's wording) by falling back to live translation.
 
-## R39a/R39f Sourcing — REVISED: use the Liturgia API directly
+## R39a/R39e/R39f Sourcing — REVISED: use the Liturgia API directly
 
-The user confirmed: extract whatever `oracoes.coleta` / `oracoes.comunhao` the API
-already returns per day instead of transcribing every Sunday/feast's Coleta and
-Oração Pós-Comunhão from Missal photos. `liturgyApi.js` now caches these two prayers
-the same way as the readings — PT source text + opening-words key for the R36 match,
-EN produced lazily on first match via the existing translation path — so there is
-**no static `coleta.json`/`pos-comunhao.json` file at all**; the data is always fetched
-fresh for the actual Mass date (including the Saturday Vigil rule, design note 6.6).
+The user confirmed: extract whatever `oracoes.coleta` / `oracoes.oferendas` /
+`oracoes.comunhao` the API already returns per day instead of transcribing every
+Sunday/feast's Opening Prayer, Prayer over the Offerings, and Prayer after Communion
+from Missal photos. `liturgyApi.js` now caches all three prayers the same way as the
+readings — PT source text + opening-words key for the R36 match, EN produced lazily on
+first match via the existing translation path — so there is **no static
+`coleta.json`/`oferendas.json`/`pos-comunhao.json` file at all**; the data is always
+fetched fresh for the actual Mass date (including the Saturday Vigil rule, design note
+6.6). Note this `oferendas` prayer is the priest's spoken text after "Orai, irmãos..."
+(R28) — distinct from the offertory hymn, which this parish always sings instead of any
+spoken rite dialogue (hymn policy, R2, unaffected by this change).
 
-- **Liturgia API** → Leituras, Salmo, Evangelho, Coleta, Oração Pós-Comunhão
-  (day-specific, R35/R37/R39a/R39f).
+- **Liturgia API** → Leituras, Salmo, Evangelho, Coleta, Oração sobre as Oferendas,
+  Oração Pós-Comunhão (day-specific, R35/R37/R39a/R39e/R39f).
 - **Missal-transcribed JSON** → Prefácio, Oração Eucarística, Rito da Comunhão
   (R38/R39b/R39c/R39d) — these still have no API source and need the Missal PDF/photos.
 
-## R39e vs. R27 — RESOLVED: drop R39e, always sung here
+## R39e vs. R27 — SUPERSEDED, see "R39a/R39e/R39f Sourcing — REVISED" above
 
-This parish always sings an offertory hymn at this moment — never the spoken universal
-Missal dialogue. Decision: **R39e is not needed.** Apply the hymn policy (R2 — don't
+~~This parish always sings an offertory hymn at this moment — never the spoken universal
+Missal dialogue. Decision: R39e is not needed. Apply the hymn policy (R2 — don't
 translate, app stays quiet) for the Rito das Oferendas moment instead of building a
-Missal-JSON catalog entry for it. R39 scope is now: Coleta, Prefácio, Oração
-Eucarística, Rito da Comunhão, Oração Pós-Comunhão (R39e/Oferendas removed).
+Missal-JSON catalog entry for it.~~ This conflated two distinct moments: the *sung*
+offertory hymn (still covered by the hymn policy, R2 — stays quiet, correct) and the
+priest's *spoken* "Oração sobre as Oferendas" after "Orai, irmãos..." (R28), which does
+need translating and is now sourced live from the Liturgia API (R39e, reinstated). R39
+scope is now: Coleta, Oferendas, Pós-Comunhão (all three live via API), Prefácio,
+Oração Eucarística, Rito da Comunhão (still Missal-photo-sourced).
 
 ## R40 — Long Creed (`credo.json`) — RESOLVED, text authored
 

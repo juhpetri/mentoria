@@ -52,8 +52,8 @@ HTTP API.
 | `normalize` | Lowercase + strip accents/punctuation to a comparable form for matching. | R3, R36 |
 | `router` | The brain: classify each finalized segment (fixed Ordinary / day-specific / Missal-variant / sung / unknown) and dispatch. Holds the dedup guard (R10) and the verify-before-trust check (R36). | R3, R4, R10, R12, R36 |
 | `catalog.ordinary` | Static catalog of the fixed Ordinary parts (today's `liturgy.js`), keyword → {EN title, EN text, explanation}. | R2, R11 |
-| `catalog.missal` | Indexed JSON catalogs sourced from the Missal PDF: `prefacio`, `oracao-eucaristica`, `rito-comunhao`, `credo`. Keyword(opening words) → {PT, EN}. (Coleta/Pós-Comunhão moved to `liturgy` below.) | R30, R38, R39, R40, R41 |
-| `liturgy` | On startup, fetch the day's liturgy (readings/psalm/gospel + Coleta/Pós-Comunhão) from Liturgia API v3, cache in memory. | R35, R37, R39a, R39f |
+| `catalog.missal` | Indexed JSON catalogs sourced from the Missal PDF: `prefacio`, `oracao-eucaristica`, `rito-comunhao`, `credo`. Keyword(opening words) → {PT, EN}. (Coleta/Oferendas/Pós-Comunhão moved to `liturgy` below.) | R30, R38, R39, R40, R41 |
+| `liturgy` | On startup, fetch the day's liturgy (readings/psalm/gospel + Coleta/Oferendas/Pós-Comunhão) from Liturgia API v3, cache in memory. | R35, R37, R39a, R39e, R39f |
 | `translate` | Live PT→EN via MyMemory, used only on the unknown/fallback path. Handles failure gracefully. | R4, R9 |
 | `speech` | Serialized speech queue + TTS playback; supports immediate flush/stop. | R5, R9b |
 | `ui` | Minimal: Start/Stop control, status indicator, collapsed debug transcript. Audio-first. | R6, R7, R9b |
@@ -74,8 +74,8 @@ HTTP API.
 ### 3.2 Missal-variant catalog entry (indexed JSON, `catalog.missal`)
 One file per part (`prefacio.json`, `oracao-eucaristica.json`, `rito-comunhao.json`,
 `credo.json`). Indexed by a normalized key derived from the opening words so lookup is
-O(1)-ish, not a linear scan (R38 sourcing). Coleta/Pós-Comunhão are NOT here — see 3.3,
-they're day-specific and fetched live instead.
+O(1)-ish, not a linear scan (R38 sourcing). Coleta/Oferendas/Pós-Comunhão are NOT here
+— see 3.3, they're day-specific and fetched live instead.
 ```
 // oracao-eucaristica.json  (keyed object, not array)
 {
@@ -93,11 +93,13 @@ they're day-specific and fetched live instead.
 ### 3.3 Day liturgy cache (runtime, `liturgy`)
 Fetched from `GET https://liturgia.up.railway.app/v3/{dd-mm-yyyy}` on startup (R37,
 applying the Saturday Vigil rule from 6.6), reduced to readings/psalm/gospel **plus
-`oracoes.coleta`/`oracoes.comunhao`** (R39a/R39f — REVISED, see spec.md), each with PT
-source text for the R36 verify step. EN is produced lazily (translate-once-then-cache)
-the first time that item is matched, OR pre-translated right after fetch — see open
-design note 6.1. `oracoes.oferendas` is intentionally never extracted (R39e — always
-prayed silently at this parish).
+`oracoes.coleta`/`oracoes.oferendas`/`oracoes.comunhao`** (R39a/R39e/R39f — REVISED, see
+spec.md), each with PT source text for the R36 verify step. EN is produced lazily
+(translate-once-then-cache) the first time that item is matched, OR pre-translated
+right after fetch — see open design note 6.1. The `oferendas` entry here is the
+priest's spoken "Oração sobre as Oferendas" after "Orai, irmãos..." (R28) — the
+offertory *hymn* itself stays out of scope, covered separately by the sung-content
+policy (R2).
 ```
 {
   date: "28-06-2026",
@@ -107,6 +109,7 @@ prayed silently at this parish).
     { id: "segunda-leitura", ptOpening: "...", ptFull: "...", en: null },
     { id: "evangelho", ptOpening: "...", ptFull: "...", en: null },
     { id: "coleta", ptOpening: "concedei deus todo poderoso que a vossa", ptFull: "...", en: null },
+    { id: "oferendas", ptOpening: "...", ptFull: "...", en: null },
     { id: "pos-comunhao", ptOpening: "...", ptFull: "...", en: null }
   ]
 }
