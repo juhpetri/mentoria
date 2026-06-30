@@ -285,10 +285,43 @@ possible. Research findings change what's actually feasible:
   do have official English versions, being part of the universal Missal) or (b)
   produced via translation (non-official) where it doesn't (EP V specifically).
 
+## R38 Sourcing — RESOLVED: PT from the user's own physical Missal
+
+The user has a physical copy of the Missal and will use it directly as the
+**authoritative PT source** for transcription, rather than the scattered PDFs/blogs
+found in research. This replaces "manual PT curation from web sources" with "manual PT
+transcription from the user's own Missal" — same effort shape (manual, one-time, then
+static JSON), more authoritative source. EN sourcing question (official ICEL/USCCB text
+where it exists vs. translated where it doesn't, e.g. EP V) remains as decided.
+
+## R39 — New Requirement: Full Structured JSON Catalogs from the Physical Missal
+
+The user wants structured JSON generated for **every part of the Missal they have
+available**, not just the Eucharistic Prayer/Preface pair from R38. Confirmed scope,
+each as its own structured catalog (style consistent with `liturgy.js`/R38 — keyword
+detection + full PT text + full EN text):
+
+| ID | Catalog | Scope | Status |
+|----|---------|-------|--------|
+| R39a | Coleta (Opening Prayer) variants | One entry per Sunday/feast in the Missal | **Open** — note overlap with R35/R37 (Liturgia API already supplies the day-specific Coleta text); needs reconciling whether the Missal-transcribed JSON replaces, supplements, or is cross-checked against the API-fetched version. |
+| R39b | Prefácio (Preface) variants | One entry per Preface in the Missal (~81 universally, however many this Missal edition contains) | Open — already scoped in R38, this confirms PT comes from the user's Missal. |
+| R39c | Oração Eucarística (Eucharistic Prayer) variants | One entry per Eucharistic Prayer in the Missal (incl. "Oração V") | Open — already scoped in R38; PT now sourced from the Missal directly, resolving the earlier PT-sourcing gap. EN-for-EP-V gap (no official translation) still stands. |
+| R39d | Rito da Comunhão (Communion Rite) | Fixed dialogue/prayer text in this rite | **Open — new in this message**, not previously scoped as its own catalog (R28 "Orai, irmãos" and the Lamb of God/Communion entries in `liturgy.js` cover fragments of this rite already; needs reconciling what's missing vs. already covered). |
+| R39e | Rito das Oferendas (Offertory Rite) | Fixed dialogue/prayer text in this rite | **Open — new in this message.** Note tension with R27's unresolved decision (this parish sings a specific offertory hymn instead of/alongside the universal dialogue) — needs reconciling which text actually gets used live at this parish before encoding it. |
+| R39f | Oração Pós-Comunhão (Prayer after Communion) | One entry per Sunday/feast in the Missal | **Open** — same overlap-with-API note as R39a (Liturgia API already returns "Comunhão" prayer text per day via R35/R37). |
+
 ## Still-Open Decisions
-- **Confirm the hybrid sourcing plan above** is acceptable, given a fully "existing
-  digital source" turned out not to exist: manual PT curation + official EN where
-  available, translated EN where not (EP V).
+- **R39a/R39f overlap with R35/R37**: the Liturgia API already supplies day-specific
+  Coleta and post-Communion prayer text. Decide whether the Missal-transcribed JSON
+  (R39a/R39f) replaces the API as the source of truth, supplements it as a fallback, or
+  is used to cross-check/verify the API's text (tying into the R36 verify-before-trust
+  pattern). Doing all three from two different sources risks drift if the Missal edition
+  and the API's underlying source ever disagree.
+- **R39e vs. R27**: this parish's actual sung offertory practice (a specific hymn) vs.
+  the universal Missal dialogue — which is what the live app should expect to hear at
+  that moment, given R2's policy of not translating hymns?
+- **EN sourcing**: still pending — official ICEL/USCCB text where it exists, translated
+  where it doesn't (notably EP V, confirmed to have no official English version).
 - **Long Creed catalog entry**: needs its own full English translation authored
   (Nicene Creed, standard ICEL/CNBB English text) before it can be added — not yet
   written.
