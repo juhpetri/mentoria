@@ -76,14 +76,39 @@
     "textEn": "Holy, Holy, Holy Lord God of hosts. Heaven and earth are full of your glory. Hosanna in the highest. Blessed is he who comes in the name of the Lord. Hosanna in the highest.",
     "explanation": "Sung or recited by the whole assembly together, right after the Preface."
   },
-  "misterio-da-fe": {
-    "id": "misterio-da-fe",
+  "misterio-da-fe-a": {
+    "id": "misterio-da-fe-a",
     "keywords": [
-      "eis o misterio da fe"
+      "misterio da fe"
     ],
-    "titleEn": "Memorial Acclamation",
+    "matchPriority": "low — only match this form if neither misterio-da-fe-b nor misterio-da-fe-c matched first (their cues both contain this phrase as a prefix)",
+    "titleEn": "Memorial Acclamation — Form A",
+    "priestCuePt": "Mistério da fé",
+    "responsePt": "Anunciamos, Senhor, a vossa morte e proclamamos a vossa ressurreição. Vinde, Senhor Jesus!",
     "textEn": "We proclaim your Death, O Lord, and profess your Resurrection until you come again.",
-    "explanation": "The assembly's acclamation right after the consecration. The priest may use one of a few authorized forms; this is the most common one used here."
+    "explanation": "The assembly's acclamation right after the consecration, when the priest's cue is simply 'Mistério da fé.'"
+  },
+  "misterio-da-fe-b": {
+    "id": "misterio-da-fe-b",
+    "keywords": [
+      "misterio da fe e do amor"
+    ],
+    "titleEn": "Memorial Acclamation — Form B",
+    "priestCuePt": "Mistério da fé e do amor",
+    "responsePt": "Todas as vezes que comemos deste pão e bebemos deste cálice, anunciamos, Senhor, a vossa morte, enquanto esperamos a vossa vinda!",
+    "textEn": "When we eat this Bread and drink this Cup, we proclaim your Death, O Lord, until you come again.",
+    "explanation": "The assembly's acclamation right after the consecration, when the priest's cue is 'Mistério da fé e do amor.'"
+  },
+  "misterio-da-fe-c": {
+    "id": "misterio-da-fe-c",
+    "keywords": [
+      "misterio da fe para a salvacao do mundo"
+    ],
+    "titleEn": "Memorial Acclamation — Form C",
+    "priestCuePt": "Mistério da fé para a salvação do mundo",
+    "responsePt": "Salvador do mundo, salvai-nos vós que nos libertastes pela cruz e ressurreição!",
+    "textEn": "Save us, Savior of the world, for by your Cross and Resurrection you have set us free.",
+    "explanation": "The assembly's acclamation right after the consecration, when the priest's cue is 'Mistério da fé para a salvação do mundo.'"
   },
   "grande-amem": {
     "id": "grande-amem",

@@ -176,6 +176,14 @@ Key points:
 3. **6.3 R8 preface sentence-boundary smoothing** and **6.4 R9 translation-API failure
    handling** remain the two spec-level open requirements; their detailed approach is
    designed at implementation time (buffering strategy / retry+skip+notify respectively).
+4. **6.5 Longest-keyword-match priority.** Some catalog entries have overlapping
+   keywords by design — e.g. `ordinary.json`'s three Memorial Acclamation forms
+   (`misterio-da-fe-a/b/c`): the priest's cue for Forms B and C both start with the
+   same words as Form A's cue ("mistério da fé..."). Matching must check the longest/
+   most specific keyword first and only fall back to a shorter one if no longer match
+   is found, otherwise Form A would incorrectly win every time. Applies to
+   `catalog.ordinary` and `catalog.missal` alike; implement as a single sort-by-length
+   (or explicit priority field) rule in the matcher, not per-entry special-casing.
 
 ## 7. Tech Choices (unchanged from spec)
 
