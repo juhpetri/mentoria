@@ -310,13 +310,21 @@ detection + full PT text + full EN text):
 | R39e | Rito das Oferendas (Offertory Rite) | Fixed dialogue/prayer text in this rite | **Open — new in this message.** Note tension with R27's unresolved decision (this parish sings a specific offertory hymn instead of/alongside the universal dialogue) — needs reconciling which text actually gets used live at this parish before encoding it. |
 | R39f | Oração Pós-Comunhão (Prayer after Communion) | One entry per Sunday/feast in the Missal | **Open** — same overlap-with-API note as R39a (Liturgia API already returns "Comunhão" prayer text per day via R35/R37). |
 
+## R39a/R39f Overlap with the Liturgia API — RESOLVED: no overlap, scope narrowed
+
+The Liturgia API's role is scoped to **Leituras, Salmos, and Evangelho only**
+(first/second reading, responsorial psalm, Gospel) — not the Coleta or the
+post-Communion prayer, despite the API's response technically including those fields
+(per the R35 README research). Decision: ignore the API's Coleta/Oferendas/Comunhão
+fields entirely; those three come **exclusively** from the user's Missal-transcribed
+JSON (R39a, R39e, R39f). This removes the overlap/drift concern raised earlier — each
+data source now has a single, non-overlapping responsibility:
+
+- **Liturgia API** → Leituras, Salmo, Evangelho (day-specific, R35/R37).
+- **Missal-transcribed JSON** → Coleta, Prefácio, Oração Eucarística, Rito da Comunhão,
+  Rito das Oferendas, Oração Pós-Comunhão (R38/R39).
+
 ## Still-Open Decisions
-- **R39a/R39f overlap with R35/R37**: the Liturgia API already supplies day-specific
-  Coleta and post-Communion prayer text. Decide whether the Missal-transcribed JSON
-  (R39a/R39f) replaces the API as the source of truth, supplements it as a fallback, or
-  is used to cross-check/verify the API's text (tying into the R36 verify-before-trust
-  pattern). Doing all three from two different sources risks drift if the Missal edition
-  and the API's underlying source ever disagree.
 - **R39e vs. R27**: this parish's actual sung offertory practice (a specific hymn) vs.
   the universal Missal dialogue — which is what the live app should expect to hear at
   that moment, given R2's policy of not translating hymns?
