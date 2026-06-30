@@ -165,12 +165,53 @@ variable core (e.g. fixed introduction formula + variable body).
 |----|-------------|--------|
 | R35 | The app SHALL be able to look up and pre-translate the liturgical-day-specific fixed prayers (Coleta/Opening Prayer, Oração sobre as Oferendas, Oração Depois da Comunhão) and the parish's chosen Eucharistic Prayer (currently EP V), keyed to the calendar date / liturgical day, rather than relying on live translation for these. | **Open — needs a data source.** These texts are not in `liturgy.js` today and are not generic across weeks like the Ordinary parts. Needs a content source (e.g. transcribing each week's bulletin in advance, or a liturgical-calendar API/database of the Roman Missal's propers) — this is a content/data-sourcing problem as much as a code one, and should be scoped as its own design discussion before implementation (where do the day's texts come from, who maintains them, how far in advance). |
 
+## R35 Data Source — RESOLVED (readings + Coleta)
+
+User-proposed source: **Liturgia API v3** (https://github.com/Dancrf/liturgia-diaria,
+hosted at `https://liturgia.up.railway.app/v3/`). Confirmed via its README that it
+covers what we need for the day-specific fixed texts:
+
+- Query by date: `GET /v3/{day}-{month}-{year}` (or current day, or a date range up to
+  7 days). No auth, no documented rate limit.
+- Each celebration in the response includes **full prayer texts** for Coleta (opening
+  prayer), Oferendas (offertory prayer), and Comunhão (post-communion prayer) — covers
+  R18, R29, R31 directly.
+- Each celebration also includes **Leituras** (first reading, responsorial psalm,
+  Gospel) with full `texto`, biblical reference, and (for the psalm) the `refrao` —
+  covers R19/R21 (readings) and gives us the psalm refrain text for R20, although per
+  the sung-content decision (#2) we are not translating the psalm itself.
+- Does **not** appear to include the Eucharistic Prayer text (that's outside the daily
+  Lectionary/Missal-propers scope this API targets) — Eucharistic Prayer V text still
+  needs to be transcribed/authored separately and stored as static fixed text in the
+  app, since the EP texts themselves don't change day to day (only which EP is chosen
+  might, and this parish has told us they consistently use EP V).
+- 404 is returned for a date with no defined liturgy — needs basic error handling when
+  fetching (fall back to fully-live translation for that day if the lookup fails).
+
+## R36 — New Requirement: Verify Before Trusting Pre-Fetched Text
+
+The user added an important safety rule: **the app must not blindly speak the
+pre-fetched/pre-translated text just because the calendar date matched** — it must
+first confirm that what the priest is actually reading matches what the API returned
+for that day, and only then play the pre-translated audio. If the live transcript
+diverges from the expected pre-fetched Portuguese text (e.g. the priest chooses a
+different optional reading, reads from a different lectionary cycle, or simply isn't at
+that part yet), the app must fall back to the normal live STT → translate → speak path
+for that content instead of the pre-scripted one.
+
+| ID | Requirement | Status |
+|----|-------------|--------|
+| R36 | Before speaking a pre-fetched/pre-translated reading or day-specific prayer (Coleta/Oferendas/Comunhão), the app SHALL compare the live transcript against the corresponding pre-fetched Portuguese source text; if they sufficiently match, speak the pre-translated English; if they diverge, fall back to live translation (R4) for that segment instead. | **Open — design needed.** Requires deciding a matching strategy (e.g. compare the opening N words of the live transcript against the opening N words of the pre-fetched text, fuzzy/substring match, similarity threshold) and what "diverge" means in practice (the priest pausing mid-sentence is not the same as reading a different text entirely). Not yet designed or implemented. |
+
 ## Still-Open Decisions
-- **R35 data source**: how do we obtain each Sunday's Coleta / Oração sobre as
-  Oferendas / Oração Depois da Comunhão / Eucharistic Prayer V text in machine-readable
-  form, ahead of time, so it can be pre-translated and ready before Mass starts? (e.g.
-  manual weekly transcription from the bulletin vs. an existing liturgical text
-  database/API.)
+- **R36 matching strategy**: what similarity check and threshold reliably distinguishes
+  "this is the same text as fetched, just transcribed imperfectly by STT" from "this is
+  actually a different text than expected"? Needs a concrete algorithm before
+  implementation (e.g. normalized first-N-words substring/fuzzy match, full-segment
+  Levenshtein-based similarity score, or something else).
+- **Eucharistic Prayer V authoring**: still needs the full fixed PT/EN text
+  transcribed/authored manually (not covered by the Liturgia API), since it's a Missal
+  text rather than a daily Lectionary proper.
 - **Long Creed catalog entry**: needs its own full English translation authored
   (Nicene Creed, standard ICEL/CNBB English text) before it can be added — not yet
   written.
