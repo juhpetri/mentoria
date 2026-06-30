@@ -293,6 +293,14 @@ possible. Research findings change what's actually feasible:
 
 ## R38 Sourcing — RESOLVED: PT from the user's own Missal (PDF)
 
+**Reference document (authoritative PT source):**
+- Title: `missal-romano-2023-pdf.pdf` (Missal Romano, 2023 edition)
+- Location: Google Drive, owner juliana.a.petri@gmail.com —
+  https://drive.google.com/file/d/1UVShT5StJJ83imaNYfhnRYdyXZalYUmO/view
+- Size: ~97 MB. Intentionally **not committed to the repo** (large binary); referenced
+  by link only. All PT catalog text (Coleta, Prefácio, Oração Eucarística, Rito da
+  Comunhão, Pós-Comunhão, Credo) is transcribed/extracted from this document.
+
 The user has their Missal as a **PDF** and will use it directly as the
 **authoritative PT source** for transcription, rather than the scattered PDFs/blogs
 found in research. This replaces "manual PT curation from web sources" with "manual PT
