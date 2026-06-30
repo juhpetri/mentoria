@@ -256,14 +256,39 @@ live translation for that one, same fail-open behavor.
 |----|-------------|--------|
 | R38 | The app SHALL maintain structured JSON catalogs for Preface variants and Eucharistic Prayer variants (separate from `liturgy.js`'s Ordinary catalog), each entry keyed by detection keywords from the variant's opening words, with full PT/EN fixed text, so the specific variant in use can be identified live from the priest's speech and spoken instantly once matched. | **Open — not yet implemented.** Needs: (a) decide file structure/location (e.g. `prefaces.json` + `eucharistic-prayers.json`, or one `variants/` folder), (b) decide initial coverage (start with EP V only, expand later, vs. attempt full coverage from day one), (c) source the official PT/EN texts for each variant to populate the JSON (CNBB Missal for PT, ICEL/USCCB approved English translation for EN). |
 
+## R38 Scope & Sourcing — Decision + Research Findings (2026-06-30)
+
+User's answer: build the **full catalog** from the start (not just EP V + Ordinary Time),
+sourced from an **existing digital source** rather than manual transcription where
+possible. Research findings change what's actually feasible:
+
+- **No single ready-made bilingual source exists.** There is no GitHub/API project that
+  has all ~81 Roman Missal Prefaces and all Eucharistic Prayers in structured PT+EN
+  JSON. PT texts are scattered across PDFs (e.g. liturgia.pt's `ordinario.pdf`) and
+  liturgy blogs (e.g. "Hoje é dia de Liturgia"); collecting them is a manual
+  curation/scraping effort, not an API integration like R35/Liturgia API v3 was for
+  daily readings.
+- **Eucharistic Prayer V has no official English text.** USCCB's (US Roman Missal)
+  officially numbered Eucharistic Prayers are only I-IV, plus separately-named forms
+  (Reconciliation I-II, Masses with Children I-III, Various Needs and Occasions I-IV).
+  What this parish calls "Oração Eucarística V" appears to be a CNBB (Brazilian Bishops'
+  Conference)-specific text, approved by Rome for use in Brazil but with **no official
+  ICEL/USCCB English translation** to source. This is a real constraint, not just a
+  sourcing inconvenience: any English text we use for EP V will be **our own
+  translation** (e.g. run once through the same translation API used live, or
+  human-translated), not an official Church-approved English wording.
+- **Practical implication for R38**: "full catalog from an existing digital source" is
+  not achievable as originally framed. The realistic path is a **hybrid**: PT source
+  texts curated manually from the scattered PT sources above (one-time effort, then
+  static JSON, same as the rest of `liturgy.js`), and EN texts either (a) sourced from
+  USCCB/ICEL where an official translation genuinely exists (Prefaces and EP I-IV likely
+  do have official English versions, being part of the universal Missal) or (b)
+  produced via translation (non-official) where it doesn't (EP V specifically).
+
 ## Still-Open Decisions
-- **R38 initial scope**: which Prefaces/Eucharistic Prayers to author first — just EP V
-  (confirmed in use at this parish) plus the Prefaces likely to recur in Ordinary Time,
-  or attempt a fuller catalog immediately?
-- **R38 text sourcing**: where do the official PT and EN texts for each Preface/EP
-  variant come from (manual transcription from the Missal vs. an existing digitized
-  source)? Same sourcing question as the earlier EP V authoring decision, now scoped to
-  many variants instead of one.
+- **Confirm the hybrid sourcing plan above** is acceptable, given a fully "existing
+  digital source" turned out not to exist: manual PT curation + official EN where
+  available, translated EN where not (EP V).
 - **Long Creed catalog entry**: needs its own full English translation authored
   (Nicene Creed, standard ICEL/CNBB English text) before it can be added — not yet
   written.
