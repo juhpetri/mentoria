@@ -235,10 +235,35 @@ never silence or wrong content.
 |----|-------------|--------|
 | R37 | On app startup, the app SHALL fetch the current day's liturgy from the Liturgia API (e.g. `GET https://liturgia.up.railway.app/v3/{day}-{month}-{year}`, assuming today is the Sunday celebration being attended) and cache the returned Coleta, readings, Oferendas, and Comunhão texts in memory for comparison/lookup during the live session (per R36). | **Open — not yet implemented.** Needs: (a) where exactly to store the cache (a simple in-memory JS object/module-level variable is enough given no backend/no persistence requirement), (b) graceful handling of a 404/network failure on startup (per R35, falls back to fully-live translation with no pre-fetched data available at all, not just for one segment). |
 
+## R38 — New Requirement: Structured Catalogs for Preface and Eucharistic Prayer Variants
+
+The Missal doesn't have just one Preface or one Eucharistic Prayer — there are dozens of
+Prefaces (one per liturgical season/feast/occasion) and several Eucharistic Prayers
+(I, II, III, IV, V, plus reconciliation/various-needs forms). Earlier decisions (#4,
+Eucharistic Prayer authoring) assumed a single hardcoded EP V. The user's refinement:
+instead, build **structured JSON catalogs** — one for Prefaces, one for Eucharistic
+Prayers — where each variant is identifiable from the priest's opening words, the same
+keyword-matching principle already used in `liturgy.js` for the Ordinary, but scaled out
+to cover every variant that exists rather than just the one this parish currently uses.
+
+This generalizes (and supersedes) the earlier "just author EP V" plan: build the
+catalog data-structure once, populate it progressively (starting with EP V since that's
+confirmed in use here), and the same identify-or-fall-back-to-live logic from R36
+applies — if the opening words don't match any known Preface/EP variant, fall through to
+live translation for that one, same fail-open behavor.
+
+| ID | Requirement | Status |
+|----|-------------|--------|
+| R38 | The app SHALL maintain structured JSON catalogs for Preface variants and Eucharistic Prayer variants (separate from `liturgy.js`'s Ordinary catalog), each entry keyed by detection keywords from the variant's opening words, with full PT/EN fixed text, so the specific variant in use can be identified live from the priest's speech and spoken instantly once matched. | **Open — not yet implemented.** Needs: (a) decide file structure/location (e.g. `prefaces.json` + `eucharistic-prayers.json`, or one `variants/` folder), (b) decide initial coverage (start with EP V only, expand later, vs. attempt full coverage from day one), (c) source the official PT/EN texts for each variant to populate the JSON (CNBB Missal for PT, ICEL/USCCB approved English translation for EN). |
+
 ## Still-Open Decisions
-- **Eucharistic Prayer V authoring**: still needs the full fixed PT/EN text
-  transcribed/authored manually (not covered by the Liturgia API), since it's a Missal
-  text rather than a daily Lectionary proper.
+- **R38 initial scope**: which Prefaces/Eucharistic Prayers to author first — just EP V
+  (confirmed in use at this parish) plus the Prefaces likely to recur in Ordinary Time,
+  or attempt a fuller catalog immediately?
+- **R38 text sourcing**: where do the official PT and EN texts for each Preface/EP
+  variant come from (manual transcription from the Missal vs. an existing digitized
+  source)? Same sourcing question as the earlier EP V authoring decision, now scoped to
+  many variants instead of one.
 - **Long Creed catalog entry**: needs its own full English translation authored
   (Nicene Creed, standard ICEL/CNBB English text) before it can be added — not yet
   written.
