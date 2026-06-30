@@ -203,12 +203,39 @@ for that content instead of the pre-scripted one.
 |----|-------------|--------|
 | R36 | Before speaking a pre-fetched/pre-translated reading or day-specific prayer (Coleta/Oferendas/Comunhão), the app SHALL compare the live transcript against the corresponding pre-fetched Portuguese source text; if they sufficiently match, speak the pre-translated English; if they diverge, fall back to live translation (R4) for that segment instead. | **Open — design needed.** Requires deciding a matching strategy (e.g. compare the opening N words of the live transcript against the opening N words of the pre-fetched text, fuzzy/substring match, similarity threshold) and what "diverge" means in practice (the priest pausing mid-sentence is not the same as reading a different text entirely). Not yet designed or implemented. |
 
+## R36 Matching Strategy — RESOLVED
+
+User's answer: keep it simple, no fuzzy-similarity scoring. The strategy is
+**identify-by-reading, fail open to live translation**:
+
+1. On startup, the app always assumes the **Sunday celebration** (this app's use case
+   is specifically the Sunday Mass this community attends) and fetches that day's
+   liturgy from the Liturgia API immediately on load.
+2. The fetched Coleta / readings / Oferendas / Comunhão texts are cached in memory
+   (client-side, no backend — see R37 below) for the duration of the session, to be
+   compared against as Mass proceeds.
+3. When the live transcript reaches a reading (e.g. after the lector's "Leitura da
+   Profecia de..." cue), the app tries to identify which pre-fetched reading is being
+   read.
+4. **If found** (the live transcript corresponds to one of the cached options): speak
+   the pre-translated English for that reading.
+5. **If NOT found** (no match against what was cached for that day): immediately treat
+   it as live content from that point on — fall through to the normal live STT →
+   translate → speak path (R4), same as today, no special handling needed beyond "we
+   tried, it didn't match, so just translate live."
+
+This avoids needing a similarity-threshold algorithm — it's a binary
+found-in-cache-or-not check, and the safe fallback (live translation) is already built
+and proven (R4), so a missed match just means slightly more latency for that segment,
+never silence or wrong content.
+
+## R37 — New Requirement: Startup Fetch & Cache
+
+| ID | Requirement | Status |
+|----|-------------|--------|
+| R37 | On app startup, the app SHALL fetch the current day's liturgy from the Liturgia API (e.g. `GET https://liturgia.up.railway.app/v3/{day}-{month}-{year}`, assuming today is the Sunday celebration being attended) and cache the returned Coleta, readings, Oferendas, and Comunhão texts in memory for comparison/lookup during the live session (per R36). | **Open — not yet implemented.** Needs: (a) where exactly to store the cache (a simple in-memory JS object/module-level variable is enough given no backend/no persistence requirement), (b) graceful handling of a 404/network failure on startup (per R35, falls back to fully-live translation with no pre-fetched data available at all, not just for one segment). |
+
 ## Still-Open Decisions
-- **R36 matching strategy**: what similarity check and threshold reliably distinguishes
-  "this is the same text as fetched, just transcribed imperfectly by STT" from "this is
-  actually a different text than expected"? Needs a concrete algorithm before
-  implementation (e.g. normalized first-N-words substring/fuzzy match, full-segment
-  Levenshtein-based similarity score, or something else).
 - **Eucharistic Prayer V authoring**: still needs the full fixed PT/EN text
   transcribed/authored manually (not covered by the Liturgia API), since it's a Missal
   text rather than a daily Lectionary proper.
