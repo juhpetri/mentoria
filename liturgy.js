@@ -5,6 +5,23 @@
 // ou não fala português).
 const LITURGY = [
   {
+    // Sung/spoken before the Sign of the Cross at this parish. Repeated 1-2x.
+    // Not part of the official Missal Romano text — it's a local entrance
+    // practice, but it's fixed wording, so it's pre-scripted like the rest.
+    id: "invocacao-inicial",
+    keywords: [
+      "invocamos o seu nome",
+      "invocamos o seu poder",
+      "invocamos a tua presença no meio de nós",
+    ],
+    titlePt: "Invocação Inicial",
+    titleEn: "Opening Invocation",
+    responsePt: "Invocamos o seu nome, invocamos o seu poder, invocamos a tua presença no meio de nós.",
+    responseEn: "We call on your name, we call on your power, we call on your presence among us.",
+    explanationEn:
+      "Before the Sign of the Cross, the assembly calls on God to be present — a local opening practice, repeated once or twice to settle the community into prayer.",
+  },
+  {
     id: "sinal-cruz",
     keywords: ["em nome do pai", "do filho e do espírito santo"],
     titlePt: "Sinal da Cruz",
@@ -15,14 +32,22 @@ const LITURGY = [
       "The priest opens Mass invoking the Holy Trinity. 'Amen' means 'so be it' — the assembly confirms and joins the prayer.",
   },
   {
+    // This parish's missal uses the greeting formula whose response is
+    // "Bendito seja Deus, que nos reuniu no amor de Cristo" (one of the
+    // Roman Missal's alternative greeting forms), repeated 0-2x — not the
+    // more common "Ele está no meio de nós" form.
     id: "saudacao",
-    keywords: ["o senhor esteja com vós", "a graça de nosso senhor jesus cristo"],
-    titlePt: "Saudação",
+    keywords: [
+      "o deus da esperança",
+      "que nos cumula de toda alegria",
+      "bendito seja deus, que nos reuniu no amor de cristo",
+    ],
+    titlePt: "Saudação Inicial",
     titleEn: "Greeting",
-    responsePt: "Ele está no meio de nós.",
-    responseEn: "And with your spirit.",
+    responsePt: "Bendito seja Deus, que nos reuniu no amor de Cristo.",
+    responseEn: "Blessed be God, who has gathered us together in the love of Christ.",
     explanationEn:
-      "A greeting exchanged at the start of Mass and before the Gospel, expressing that Christ is present in the gathered community.",
+      "A greeting exchanged at the start of Mass. This parish's response form praises God for bringing the community together in Christ's love, rather than the more common 'And with your spirit.'",
   },
   {
     id: "ato-penitencial",

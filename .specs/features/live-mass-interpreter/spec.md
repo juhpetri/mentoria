@@ -33,6 +33,8 @@ time, synchronized closely enough with the live celebration to respond when expe
 | R8 | The Preface's variable body SHALL be translated with sentence boundaries that don't choppily cut mid-clause more often than the current naive `isFinal`-boundary approach. | **Open — not yet resolved** |
 | R9 | If the translation API call fails or is rate-limited, the app SHALL degrade gracefully (e.g. skip that segment, optionally notify) rather than silently losing audio with no indication. | **Open — not yet resolved** |
 | R10 | The app SHALL avoid re-translating/re-speaking duplicate or overlapping finalized transcript segments. | **Open — not yet resolved** |
+| R11 | The fixed-part catalog SHALL reflect this specific parish's actual missal/local wording (e.g. opening invocation, greeting response form), not generic textbook Mass text, since parishes vary in which optional forms they use. | Done for the opening sequence (`invocacao-inicial`, corrected `saudacao`) based on the parish bulletin "O Povo de Deus" (Arquidiocese de Brasília); rest of catalog not yet cross-checked against this bulletin. |
+| R12 | Spoken introductions that precede other parts (e.g. the commentator's remarks before readings) SHALL NOT be treated as fixed text, even though they recur structurally every week — their content changes, so they always go through the live-translation path (R4), never the instant-fixed path (R3). | Done — by design, no keyword entries are created for these; documented as an explicit rule rather than left as an accidental gap. |
 
 ## Acceptance Criteria (for open requirements R8-R10)
 - **R8**: Given a preface body of 3+ sentences spoken at a normal pace, the live English

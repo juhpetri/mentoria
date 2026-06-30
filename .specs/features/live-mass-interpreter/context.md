@@ -22,3 +22,16 @@ Decisions made during spec discussion with the user (2026-06-30), in chronologic
 7. **Preface example surfaced an open question**: the user asked specifically how the
    variable preface body is handled, which led to identifying R8 (sentence-boundary
    choppiness) as an explicit open risk rather than an assumption.
+8. **Real parish bulletin ("O Povo de Deus", Arquidiocese de Brasília) supplied as
+   ground truth**: corrected the opening sequence in `liturgy.js` to match this specific
+   parish's actual missal/local practice instead of generic text:
+   - Added `invocacao-inicial` (a local, fixed opening chant — "Invocamos o seu nome...
+     " — repeated 1-2x, said before the Sign of the Cross, NOT part of the official
+     Roman Missal but fixed wording at this parish).
+   - Corrected `saudacao`'s response from the generic "Ele está no meio de nós" to
+     this parish's actual greeting form, "Bendito seja Deus, que nos reuniu no amor de
+     Cristo" (repeated 0-2x).
+   - Confirmed rule: the "Comentário inicial" (opening commentary) and the short
+     introductions ("A:" lines in the bulletin) before other parts (first reading,
+     etc.) are NOT fixed text — they vary every week — so they intentionally have no
+     keyword entry and fall through to the live-translation path (R4).
