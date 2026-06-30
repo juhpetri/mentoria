@@ -32,7 +32,8 @@ time, synchronized closely enough with the live celebration to respond when expe
 | R7 | The app SHALL run as a no-install web page accessible via a link/QR code, requiring only microphone permission. | Done (static HTML/JS/CSS, no backend) |
 | R8 | The Preface's variable body SHALL be translated with sentence boundaries that don't choppily cut mid-clause more often than the current naive `isFinal`-boundary approach. | **Open — not yet resolved** |
 | R9 | If the translation API call fails or is rate-limited, the app SHALL degrade gracefully (e.g. skip that segment, optionally notify) rather than silently losing audio with no indication. | **Open — not yet resolved** |
-| R10 | The app SHALL avoid re-translating/re-speaking duplicate or overlapping finalized transcript segments. | **Open — not yet resolved** |
+| R9b | The app SHALL provide a way to **stop the translation** at any moment (manual stop control) — stopping both listening and any queued/in-progress spoken output immediately, so the worshipper can silence it when desired. | **RESOLVED (requirement) — see decision below; not yet implemented.** |
+| R10 | The app SHALL avoid re-translating/re-speaking duplicate or overlapping finalized transcript segments, **except** when the priest explicitly asks the assembly to repeat a phrase — in that case the repetition SHALL be translated/spoken again. | **RESOLVED (requirement) — see decision below; not yet implemented.** |
 | R11 | The fixed-part catalog SHALL reflect this specific parish's actual missal/local wording (e.g. opening invocation, greeting response form), not generic textbook Mass text, since parishes vary in which optional forms they use. | Done for the opening sequence (`invocacao-inicial`, corrected `saudacao`) based on the parish bulletin "O Povo de Deus" (Arquidiocese de Brasília); rest of catalog not yet cross-checked against this bulletin. |
 | R12 | Spoken introductions that precede other parts (e.g. the commentator's remarks before readings) SHALL NOT be treated as fixed text, even though they recur structurally every week — their content changes, so they always go through the live-translation path (R4), never the instant-fixed path (R3). | Done — by design, no keyword entries are created for these; documented as an explicit rule rather than left as an accidental gap. |
 
@@ -96,13 +97,13 @@ variable core (e.g. fixed introduction formula + variable body).
 | R13 | Canto de Entrada | (sung, no tag shown) | Variable | Entrance hymn changes weekly/by season — no fixed entry; relies on live translation, which will be slow/awkward for sung lyrics. Open question: do we even want to translate hymns, or just stay silent during music and resume on spoken parts? |
 | R14 | Comentário Inicial | — | Variable | Already correctly excluded (R12). No action. |
 | R15 | Invocação Inicial + Saudação Inicial | cantado | Fixed | Already corrected in `liturgy.js` (commit `fbc2c1f`). No further action unless wording drifts. |
-| R16 | Ato Penitencial | cantado | Mixed | Intro line ("Em Jesus Cristo, o Justo...") + 3x "Senhor/Cristo/Senhor, tende piedade" exchange — the exchange itself is universally fixed text, but this bulletin shows an extra priest-led intercession line before each ("Senhor, que ofereceis o vosso perdão a Pedro arrependido...") that is NOT in the current catalog. **Decision needed**: pre-script these intercession lines (they look fixed for this particular penitential form, "Forma C"), or treat the intro lines as variable since multiple Forma-C variants exist in the Missal and the priest may rotate between them? |
+| R16 | Ato Penitencial | cantado | **RESOLVED — do not translate** | Sung at this parish — falls under the hymn policy (decision #2): no catalog entry, app stays quiet through it. No keyword/script needed. |
 | R17 | Hino do Glória | cantado | Fixed | Catalog already has `gloria`, but only the opening line as keyword/response. Full sung text is much longer — current entry under-represents it. **Decision needed**: expand the spoken/sung response to the full Gloria text, or keep it abbreviated since it's primarily sung (and singing isn't well served by our speech-trigger approach anyway)? |
 | R18 | Coleta (Opening Prayer) | missal | Variable, NOT Fixed | Important correction to my earlier assumption: despite "read from the Missal," the Collect's text is proper to each Sunday/feast — it changes every week. Catalog's existing `oracao-coleta` entry only has the trigger word "Oremos" and a generic "Amém" response — that part (the cue + assembly's Amen) IS fixed and fine to keep, but the prayer body itself must NOT be pre-scripted; it should fall through to live translation. No code is currently mis-scripting this, just flagging so it isn't "fixed" by mistake later. |
 | R19 | Primeira Leitura | leicionário | Variable | Confirmed already correct — `liturgy.js`'s `leitura` entry only fixes the closing "Palavra do Senhor / Graças a Deus" exchange, not the reading body. No action. |
 | R20 | Salmo Responsorial | cantado | Mixed | The refrain ("A todo homem que procede retamente...") repeats several times within one Mass but changes week to week; the verses always change. **Decision needed**: is it worth detecting "the psalm refrain just repeated" as a structural cue (without knowing its specific words in advance) to, e.g., pause/resume translation pacing — or just treat the whole psalm as ordinary variable speech? Currently no entry exists either way (no action taken, just surfacing the question). |
 | R21 | Segunda Leitura | leicionário | Variable | Same as R19 — confirmed correct, no action. |
-| R22 | Aclamação ao Evangelho | cantado | Mixed | "Aleluia, Aleluia, Aleluia" is fixed and could be spoken instantly when detected; the verse between repetitions is proper to the day (variable). Catalog has no entry for the Aleluia acclamation itself yet (only `evangelho` for the Gospel introduction). **Decision needed**: add a fixed "aleluia" entry, given it's a clear, short, highly-recognizable phrase good for keyword matching? |
+| R22 | Aclamação ao Evangelho | cantado | **RESOLVED — do not translate** | Sung — falls under the hymn policy (decision #2): no `aleluia` entry, app stays quiet. The Gospel introduction/acclamation formula spoken by the priest (R23, `evangelho`) is separate and stays as a fixed entry. |
 | R23 | Evangelho | evangeliário | Mixed | Catalog's `evangelho` entry already correctly covers only the fixed introduction/acclamation formula ("Evangelho de Nosso Senhor Jesus Cristo... Glória a vós, Senhor"), not the Gospel text itself (which is variable and goes to live translation). No action — already modeled correctly. |
 | R24 | Homilia | in live | Variable | Already correctly excluded — no fixed entry, by design (consistent with R12). No action. |
 | R25 | Profissão de Fé (Credo) | fixo | Fixed | Catalog's `credo` entry has the opening line only; full Creed is long. Same decision as R17 (Gloria): expand to full text, or keep abbreviated? |
@@ -127,10 +128,12 @@ variable core (e.g. fixed introduction formula + variable body).
    Collect for other Sundays). **This changes the architecture**: unlike the Ordinary
    parts (one fixed catalog entry, same every week), these need a **calendar-aware
    lookup** — see new requirement R35 below.
-2. **Hymn handling (resolves R13, R20, R22's variable verse, R27) — RESOLVED**: do not
-   translate sung/hymn content at all (entrance hymn, psalm verses, Gospel acclamation's
-   variable verse, this parish's offertory hymn). No fixed entries, no live-translation
-   attempts for these. The app should simply stay quiet/idle through music.
+2. **Hymn / sung-content handling (resolves R13, R16, R20, R22, R27) — RESOLVED**: do not
+   translate any sung content at all — entrance hymn, **Ato Penitencial (sung here)**,
+   psalm verses, **Gospel Acclamation / Aleluia (sung)**, the offertory hymn. No fixed
+   entries, no live-translation attempts for these. The app simply stays quiet/idle
+   through music. (The spoken Gospel introduction formula by the priest, R23, is NOT
+   sung and stays as a fixed entry.)
 3. **Abbreviated vs. full fixed text (resolves R17, R25) — RESOLVED, correcting an
    earlier note**:
    - Gloria: **cantado — não traduzir**, same as the sung/hymn policy in decision #2.
@@ -349,15 +352,82 @@ translate, app stays quiet) for the Rito das Oferendas moment instead of buildin
 Missal-JSON catalog entry for it. R39 scope is now: Coleta, Prefácio, Oração
 Eucarística, Rito da Comunhão, Oração Pós-Comunhão (R39e/Oferendas removed).
 
+## R40 — Long Creed (`credo.json`) — RESOLVED, text authored
+
+The Nicene-Constantinopolitan Creed (used on solemnities, distinguishable from the
+abbreviated Apostles' Creed by its opening words "Creio em um só Deus...") will be its
+own catalog file `credo.json`, with detection keywords on the opening words and full
+fixed PT + EN text below. EN is the **official 2011 ICEL English** translation — no
+machine translation needed, an official version exists.
+
+**Detection keyword (PT)**: opening "Creio em um só Deus, Pai Todo-Poderoso".
+
+**PT (authoritative, from the user's Missal):**
+> Creio em um só Deus, Pai Todo-Poderoso, criador do céu e da terra, de todas as coisas
+> visíveis e invisíveis. Creio em um só Senhor, Jesus Cristo, Filho Unigênito de Deus,
+> nascido do Pai antes de todos os séculos: Deus de Deus, luz da luz, Deus verdadeiro de
+> Deus verdadeiro, gerado, não criado, consubstancial ao Pai. Por ele todas as coisas
+> foram feitas. E por nós, homens, e para nossa salvação, desceu dos céus: e se encarnou
+> pelo Espírito Santo, no seio da Virgem Maria, e se fez homem. Também por nós foi
+> crucificado sob Pôncio Pilatos; padeceu e foi sepultado. Ressuscitou ao terceiro dia,
+> conforme as Escrituras, e subiu aos céus, onde está sentado à direita do Pai. E de
+> novo há de vir, em sua glória, para julgar os vivos e os mortos; e o seu reino não
+> terá fim. Creio no Espírito Santo, Senhor que dá a vida, e procede do Pai e do Filho;
+> e com o Pai e o Filho é adorado e glorificado: ele que falou pelos profetas. Creio na
+> Igreja, una, santa, católica e apostólica. Professo um só batismo para remissão dos
+> pecados. E espero a ressurreição dos mortos e a vida do mundo que há de vir. Amém.
+
+**EN (official 2011 ICEL):**
+> I believe in one God, the Father almighty, maker of heaven and earth, of all things
+> visible and invisible. I believe in one Lord Jesus Christ, the Only Begotten Son of
+> God, born of the Father before all ages. God from God, Light from Light, true God from
+> true God, begotten, not made, consubstantial with the Father; through him all things
+> were made. For us men and for our salvation he came down from heaven, and by the Holy
+> Spirit was incarnate of the Virgin Mary, and became man. For our sake he was crucified
+> under Pontius Pilate, he suffered death and was buried, and rose again on the third day
+> in accordance with the Scriptures. He ascended into heaven and is seated at the right
+> hand of the Father. He will come again in glory to judge the living and the dead and
+> his kingdom will have no end. I believe in the Holy Spirit, the Lord, the giver of
+> life, who proceeds from the Father and the Son, who with the Father and the Son is
+> adored and glorified, who has spoken through the prophets. I believe in one, holy,
+> catholic and apostolic Church. I confess one Baptism for the forgiveness of sins and I
+> look forward to the resurrection of the dead and the life of the world to come. Amen.
+
+Status: text is fully authored here; the actual `credo.json` file is **not yet created**
+(spec-first, per standing instruction — to be generated at implementation time from this
+content).
+
+## R41 — Eucharistic Prayer / Preface EN Translation Source — RESOLVED
+
+For the Missal-sourced catalogs where **no official English exists** (notably the
+Eucharistic Prayers, e.g. EP V), the EN text is produced by **translating the user's PT
+Missal PDF once, ahead of time, and storing the result indexed in the JSON** — NOT
+translating live during Mass. This keeps these prayers in the instant-playback path (the
+EN is already in the catalog, looked up by key), so there is no translation latency at
+Mass time. The one-time pre-translation is a build/authoring step, not a runtime call.
+(Where an official ICEL/USCCB English does exist — Prefaces, EP I-IV, the Creed R40 — use
+the official text instead of machine translation.)
+
 ## Still-Open Decisions
-(none outstanding for R38/R39 sourcing/scope at this point — remaining open items are
-R36's already-resolved fallback logic implementation, the Long Creed text authoring, and
-whatever surfaces next.)
-- **EN sourcing**: still pending — official ICEL/USCCB text where it exists, translated
-  where it doesn't (notably EP V, confirmed to have no official English version).
-- **Long Creed catalog entry**: needs its own full English translation authored
-  (Nicene Creed, standard ICEL/CNBB English text) before it can be added — not yet
-  written.
+(none outstanding — Ato Penitencial, Aclamação ao Evangelho, Long Creed text, and EP/
+Preface EN sourcing are all resolved above. Remaining work is implementation of the
+already-resolved decisions, not further decision-making.)
+
+## R9b / R10 — Technical Behaviors — RESOLVED
+
+- **R9b (stop translation)**: there must be a clear manual control to stop the
+  translation entirely at any point — it stops capturing audio and immediately silences
+  any speech that is queued or currently playing (not just "stop after the current
+  sentence finishes"). This is the user's primary "make it quiet now" escape hatch,
+  distinct from the app naturally going idle during hymns.
+- **R10 (no double-translation, with priest-repeat exception)**: by default the app must
+  NOT translate/speak the same spoken segment twice (guarding against the STT re-emitting
+  overlapping finalized text). **Exception**: when the priest deliberately asks the
+  faithful to repeat a phrase (a call-and-response / "repitam comigo" moment), the
+  repeated utterance SHOULD be translated/spoken again rather than suppressed as a
+  duplicate. Open design sub-question for implementation: how to detect "the priest asked
+  for a repeat" — likely a keyword cue ("repitam", "repita comigo", "todos juntos", etc.)
+  that temporarily disables the dedup guard for the next utterance.
 
 ## Success Metrics (manual, prototype stage)
 - A volunteer who doesn't speak Portuguese can sit through one full Mass with the app
