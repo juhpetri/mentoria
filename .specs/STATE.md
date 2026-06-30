@@ -29,6 +29,9 @@ time through earphones, instead of reading translated text on a screen.
    finalized segments.
 
 ## Handoff State
-Prototype implemented and pushed to branch `claude/immigrant-mass-participation-krtsy9`
-(commit `78a5009`). Spec phase started for `live-mass-interpreter` to formalize
-requirements and plan resolution of the open risks above.
+Spec phase complete for `live-mass-interpreter` (all content/scope decisions resolved;
+only R8/R9 technical approaches deferred to implementation). **Design** (`design.md`) and
+**Tasks** (`tasks.md`) authored. Repo currently holds only `.specs/` + `docs/guia-usuario.pdf`
+(prototype code removed). Standing instruction: spec/planning only — no application code
+until the user authorizes Execute. Next phase = Execute (Phase 0 of `tasks.md`) on the
+user's go-ahead.
