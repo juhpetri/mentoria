@@ -15,6 +15,14 @@ const PAUSE_MS = 400;
 // worshipper isn't left waiting indefinitely for translation to start.
 const MAX_UNFLUSHED_WORDS = 25;
 
+// pt-BR SpeechRecognition punctuates its own hypothesis (periods, commas,
+// colons) at natural clause/sentence breaks — a much more reliable pause
+// signal than a fixed silence timeout, since real speech pauses (e.g.
+// mid-liturgy) are often shorter than any timeout we could safely pick.
+// When the *raw* (pre-normalize) hypothesis ends in one of these, flush
+// immediately instead of waiting out the debounce.
+const SENTENCE_END_RE = /[.!?:;]\s*$/;
+
 export function createRouter({ catalogEntries, liturgyCache, dedupGuard, speechQueue, onSegmentClassified }) {
   // SpeechRecognition's result list holds several independent segments at
   // once (it splits continuous speech on detected pauses), each identified
@@ -72,7 +80,10 @@ export function createRouter({ catalogEntries, liturgyCache, dedupGuard, speechQ
     clearPauseTimer(segmentId);
 
     const flushedCount = getFlushedCount(segmentId);
-    if (words.length - flushedCount >= MAX_UNFLUSHED_WORDS) {
+    if (
+      words.length - flushedCount >= MAX_UNFLUSHED_WORDS ||
+      SENTENCE_END_RE.test(rawText.trim())
+    ) {
       await flushSegment(segmentId, norm);
       return;
     }
