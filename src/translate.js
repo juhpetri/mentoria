@@ -8,22 +8,45 @@
 const MYMEMORY_URL = 'https://api.mymemory.translated.net/get';
 const SOURCE_LANG = 'pt';
 const TARGET_LANG = 'en';
+// Guards against Translator.create() hanging (e.g. stuck waiting on a
+// language-pack download or a permission prompt that never resolves) —
+// without this, a stuck native setup would silently block the MyMemory
+// fallback forever too, since translatePtToEn awaits the same promise.
+const NATIVE_SETUP_TIMEOUT_MS = 4000;
 
 let nativeTranslator = null; // cached Translator instance once ready
 let nativeTranslatorPromise = null; // in-flight setup, so callers share it
 
+function withTimeout(promise, ms) {
+  return Promise.race([
+    promise,
+    new Promise((resolve) => setTimeout(() => resolve(null), ms)),
+  ]);
+}
+
 async function setupNativeTranslator() {
   try {
-    if (typeof Translator === 'undefined') return null; // unsupported browser
-    const availability = await Translator.availability({
-      sourceLanguage: SOURCE_LANG,
-      targetLanguage: TARGET_LANG,
-    });
-    if (availability === 'unavailable') return null;
+    if (typeof Translator === 'undefined') {
+      console.info('[translate] no native Translator API in this browser, using MyMemory');
+      return null;
+    }
+    const availability = await withTimeout(
+      Translator.availability({ sourceLanguage: SOURCE_LANG, targetLanguage: TARGET_LANG }),
+      NATIVE_SETUP_TIMEOUT_MS,
+    );
+    if (!availability || availability === 'unavailable') return null;
     // 'downloadable'/'downloading' still resolves once the language pack is
     // ready; create() awaits that. Doing this at startup (via warmUpTranslator)
-    // keeps the download off the critical path of the first live segment.
-    return await Translator.create({ sourceLanguage: SOURCE_LANG, targetLanguage: TARGET_LANG });
+    // keeps the download off the critical path of the first live segment —
+    // but cap the wait so a slow/stuck download can't block indefinitely.
+    const translator = await withTimeout(
+      Translator.create({ sourceLanguage: SOURCE_LANG, targetLanguage: TARGET_LANG }),
+      NATIVE_SETUP_TIMEOUT_MS,
+    );
+    if (!translator) {
+      console.warn('[translate] native Translator setup timed out, using MyMemory');
+    }
+    return translator;
   } catch (err) {
     console.warn('[translate] native Translator API unavailable, will use MyMemory', err);
     return null;
@@ -71,7 +94,9 @@ export async function translatePtToEn(text) {
   const translator = nativeTranslator ?? (await getNativeTranslator());
   if (translator) {
     try {
-      return await translator.translate(text);
+      const result = await withTimeout(translator.translate(text), NATIVE_SETUP_TIMEOUT_MS);
+      if (result) return result;
+      console.warn('[translate] native translation timed out, falling back to MyMemory');
     } catch (err) {
       console.warn('[translate] native translation failed, falling back to MyMemory', err);
       // fall through to MyMemory below
