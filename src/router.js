@@ -8,7 +8,7 @@ import { translatePtToEn } from './translate.js';
 // this segment) before we treat it as a pause and translate/speak
 // whatever's accumulated since the last flush — mirrors how a human
 // interpreter waits for a natural break rather than cutting mid-thought.
-const PAUSE_MS = 900;
+const PAUSE_MS = 400;
 
 // Safety net for a homily that runs on for a long stretch with no detected
 // pause at all: force a flush after this many unflushed words so the
