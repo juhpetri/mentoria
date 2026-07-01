@@ -12,14 +12,32 @@
   "saudacao-celebrante": {
     "id": "saudacao-celebrante",
     "keywords": [
-      "o senhor esteja convosco",
-      "estejam convosco",
-      "a graca de nosso senhor jesus cristo"
+      "o senhor esteja convosco"
     ],
     "pt": "O Senhor esteja convosco.",
-    "titleEn": "Greeting dialogue (recurs throughout Mass)",
+    "titleEn": "Greeting dialogue (recurs throughout Mass) — Form C",
     "textEn": "Priest: \"The Lord be with you.\" — Your response: \"And with your spirit.\"",
-    "explanation": "This exact exchange repeats at several moments (opening greeting, before the Gospel, before the Preface, before the final blessing) — the assembly's response is always the same."
+    "explanation": "This exact exchange repeats at several moments (before the Gospel, before the Preface, before the final blessing) — the assembly's response is always the same. This is the short form (Form C), most common outside the opening greeting."
+  },
+  "saudacao-abertura-a": {
+    "id": "saudacao-abertura-a",
+    "keywords": [
+      "a graca de nosso senhor jesus cristo o amor do pai"
+    ],
+    "pt": "A graça de Nosso Senhor Jesus Cristo, o amor do Pai e a comunhão do Espírito Santo estejam convosco.",
+    "titleEn": "Opening greeting — Form A",
+    "textEn": "Priest: \"The grace of our Lord Jesus Christ, and the love of God, and the communion of the Holy Spirit be with you all.\" — Your response: \"And with your spirit.\"",
+    "explanation": "One of three authorized opening-greeting forms, used right after the Sign of the Cross."
+  },
+  "saudacao-abertura-b": {
+    "id": "saudacao-abertura-b",
+    "keywords": [
+      "a graca e a paz da parte de deus"
+    ],
+    "pt": "A graça e a paz da parte de Deus, nosso Pai, e da parte do Senhor Jesus Cristo estejam convosco.",
+    "titleEn": "Opening greeting — Form B",
+    "textEn": "Priest: \"Grace to you and peace from God our Father and the Lord Jesus Christ.\" — Your response: \"And with your spirit.\"",
+    "explanation": "One of three authorized opening-greeting forms, used right after the Sign of the Cross."
   },
   "oremos": {
     "id": "oremos",
