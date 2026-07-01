@@ -1,60 +1,173 @@
+:root {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
 body {
-  font-family: system-ui, sans-serif;
-  max-width: 480px;
-  margin: 0 auto;
-  padding: 1.5rem;
-  text-align: center;
+  margin: 0;
+  min-height: 100vh;
+  font-family: Inter, "Segoe UI", Roboto, system-ui, sans-serif;
+  background: linear-gradient(135deg, #071b2d 0%, #123a53 45%, #1f5678 100%);
+  color: #f8fafc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.app-shell {
+  width: min(1100px, 100%);
+  display: grid;
+  gap: 20px;
+}
+
+.hero-card {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 24px;
+  padding: 32px;
+  border-radius: 28px;
+  background: linear-gradient(120deg, rgba(5, 27, 46, 0.88), rgba(14, 50, 74, 0.72)),
+    url("docs/igreja.webp") center/cover;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.28);
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  min-height: 420px;
+}
+
+.hero-copy {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 16px;
+  max-width: 580px;
+}
+
+.eyebrow {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.24em;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #dcefff;
 }
 
 h1 {
-  font-size: 1.25rem;
+  margin: 0;
+  font-size: clamp(1.8rem, 3vw, 2.7rem);
+  line-height: 1.1;
+}
+
+.lead {
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.7;
+  color: rgba(248, 250, 252, 0.9);
 }
 
 .controls {
   display: flex;
-  gap: 1rem;
-  justify-content: center;
-  margin: 2rem 0;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 8px;
 }
 
 button {
-  font-size: 1.25rem;
-  padding: 1rem 2rem;
-  border-radius: 0.5rem;
+  font-size: 1rem;
+  font-weight: 700;
+  padding: 0.9rem 1.5rem;
+  border-radius: 999px;
   border: none;
   cursor: pointer;
+  color: white;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.16);
+}
+
+button:hover:not(:disabled) {
+  transform: translateY(-1px);
 }
 
 #startBtn {
-  background: #2e7d32;
-  color: white;
+  background: linear-gradient(135deg, #2e7d32, #4caf50);
 }
 
 #stopBtn {
-  background: #c62828;
-  color: white;
+  background: linear-gradient(135deg, #b32d2d, #e53935);
 }
 
 button:disabled {
-  opacity: 0.5;
+  opacity: 0.55;
   cursor: not-allowed;
+  box-shadow: none;
 }
 
 .status {
-  font-size: 1.1rem;
   min-height: 1.5em;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fbe9e7;
 }
 
-details {
-  margin-top: 2rem;
-  text-align: left;
+.hero-panel {
+  align-self: end;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 20px;
+  border-radius: 20px;
+  backdrop-filter: blur(8px);
+}
+
+.panel-title {
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.hero-panel ul {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 8px;
+  color: rgba(248, 250, 252, 0.95);
+}
+
+.debug-card {
+  background: rgba(255, 255, 255, 0.95);
+  color: #123;
+  border-radius: 20px;
+  padding: 18px 20px;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.12);
+}
+
+.debug-card summary {
+  cursor: pointer;
+  font-weight: 700;
 }
 
 .transcript {
-  max-height: 40vh;
+  margin-top: 12px;
+  max-height: 220px;
   overflow-y: auto;
-  font-size: 0.85rem;
-  color: #555;
-  border-top: 1px solid #ddd;
-  padding-top: 0.5rem;
+  font-size: 0.95rem;
+  color: #4b5563;
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+
+@media (max-width: 760px) {
+  body {
+    padding: 16px;
+  }
+
+  .hero-card {
+    grid-template-columns: 1fr;
+    padding: 24px;
+  }
+
+  .hero-panel {
+    align-self: stretch;
+  }
 }

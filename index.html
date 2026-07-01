@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -7,18 +7,36 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <main>
-    <h1>Live Mass Interpreter</h1>
+  <main class="app-shell">
+    <section class="hero-card">
+      <div class="hero-copy">
+        <p class="eyebrow">Live Mass Interpreter</p>
+        <h1>Uma experiência mais acolhedora para acompanhar a missa.</h1>
+        <p class="lead">
+          Transcrição, tradução e acompanhamento em tempo real para tornar a celebração
+          mais acessível e clara.
+        </p>
 
-    <div class="controls">
-      <button id="startBtn" disabled>Start</button>
-      <button id="stopBtn" disabled>Stop</button>
-    </div>
+        <div class="controls">
+          <button id="startBtn" disabled>Iniciar</button>
+          <button id="stopBtn" disabled>Parar</button>
+        </div>
 
-    <p id="status" class="status">Loading...</p>
+        <p id="status" class="status">Carregando...</p>
+      </div>
 
-    <details>
-      <summary>Transcript (debug)</summary>
+      <div class="hero-panel">
+        <div class="panel-title">Resumo da sessão</div>
+        <ul>
+          <li>Escuta em tempo real</li>
+          <li>Texto claro e legível</li>
+          <li>Suporte para tradução</li>
+        </ul>
+      </div>
+    </section>
+
+    <details class="debug-card">
+      <summary>Transcrição (depuração)</summary>
       <div id="transcript" class="transcript"></div>
     </details>
   </main>
