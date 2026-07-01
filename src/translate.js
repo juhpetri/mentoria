@@ -69,33 +69,41 @@ export async function warmUpTranslator() {
   await getNativeTranslator();
 }
 
+// Returns { text: null, reason: string } on failure so callers can surface
+// *why* nothing was spoken (network error, HTTP status, empty response,
+// etc.) in the debug transcript instead of a bare "translation failed".
 async function translateWithMyMemory(text) {
   try {
     const url = `${MYMEMORY_URL}?q=${encodeURIComponent(text)}&langpair=${SOURCE_LANG}|${TARGET_LANG}`;
     const res = await fetch(url);
     if (!res.ok) {
-      console.warn('[translate] MyMemory HTTP error', res.status);
-      return null;
+      const reason = `MyMemory HTTP ${res.status}`;
+      console.warn('[translate]', reason);
+      return { text: null, reason };
     }
     const data = await res.json();
     const translated = data?.responseData?.translatedText;
     if (!translated) {
-      console.warn('[translate] MyMemory empty response', data);
-      return null;
+      const reason = `MyMemory empty response (${data?.responseStatus ?? 'unknown status'})`;
+      console.warn('[translate]', reason, data);
+      return { text: null, reason };
     }
-    return translated;
+    return { text: translated, reason: null };
   } catch (err) {
-    console.warn('[translate] MyMemory failed, skipping segment', err);
-    return null;
+    const reason = `MyMemory request failed: ${err?.message ?? err}`;
+    console.warn('[translate]', reason, err);
+    return { text: null, reason };
   }
 }
 
+// Resolves to { text: string, reason: null } on success, or
+// { text: null, reason: string } describing why nothing could be spoken.
 export async function translatePtToEn(text) {
   const translator = nativeTranslator ?? (await getNativeTranslator());
   if (translator) {
     try {
       const result = await withTimeout(translator.translate(text), NATIVE_SETUP_TIMEOUT_MS);
-      if (result) return result;
+      if (result) return { text: result, reason: null };
       console.warn('[translate] native translation timed out, falling back to MyMemory');
     } catch (err) {
       console.warn('[translate] native translation failed, falling back to MyMemory', err);

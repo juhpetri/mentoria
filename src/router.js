@@ -55,10 +55,12 @@ export function createRouter({ catalogEntries, liturgyCache, dedupGuard, speechQ
     flushedWordCountBySegment.set(segmentId, words.length);
     const chunkText = chunkWords.join(' ');
 
-    const liveEn = await translatePtToEn(chunkText);
+    const { text: liveEn, reason } = await translatePtToEn(chunkText);
     if (liveEn) {
       speechQueue.speak(liveEn);
       onSegmentClassified?.({ rawText: chunkText, norm: chunkText, kind: 'live-translate-interim', en: liveEn });
+    } else {
+      onSegmentClassified?.({ rawText: chunkText, norm: chunkText, kind: 'translate-failed', reason });
     }
   }
 
@@ -68,35 +70,43 @@ export function createRouter({ catalogEntries, liturgyCache, dedupGuard, speechQ
   // spoken at natural breaks instead of staying silent until isFinal fires,
   // but without chopping mid-sentence every few words.
   async function handleInterim(rawText, segmentId) {
-    const norm = normalize(rawText);
-    if (!norm) return;
-    const words = norm.split(' ');
+    try {
+      const norm = normalize(rawText);
+      if (!norm) return;
+      const words = norm.split(' ');
 
-    // Cheap short-circuit: if this looks like a fixed/catalog phrase, let
-    // handleSegment's precise matching handle it on the final event instead
-    // of live-translating a partial match here.
-    if (matchCatalog(catalogEntries, norm)) return;
+      // Cheap short-circuit: if this looks like a fixed/catalog phrase, let
+      // handleSegment's precise matching handle it on the final event instead
+      // of live-translating a partial match here.
+      if (matchCatalog(catalogEntries, norm)) return;
 
-    clearPauseTimer(segmentId);
+      clearPauseTimer(segmentId);
 
-    const flushedCount = getFlushedCount(segmentId);
-    if (
-      words.length - flushedCount >= MAX_UNFLUSHED_WORDS ||
-      SENTENCE_END_RE.test(rawText.trim())
-    ) {
-      await flushSegment(segmentId, norm);
-      return;
+      const flushedCount = getFlushedCount(segmentId);
+      if (
+        words.length - flushedCount >= MAX_UNFLUSHED_WORDS ||
+        SENTENCE_END_RE.test(rawText.trim())
+      ) {
+        await flushSegment(segmentId, norm);
+        return;
+      }
+
+      const timer = setTimeout(() => {
+        pauseTimerBySegment.delete(segmentId);
+        flushSegment(segmentId, norm).catch((err) => {
+          onSegmentClassified?.({ rawText, norm, kind: 'error', reason: `handleInterim (debounced flush): ${err?.message ?? err}` });
+        });
+      }, PAUSE_MS);
+      pauseTimerBySegment.set(segmentId, timer);
+    } catch (err) {
+      onSegmentClassified?.({ rawText, norm: rawText, kind: 'error', reason: `handleInterim: ${err?.message ?? err}` });
     }
-
-    const timer = setTimeout(() => {
-      pauseTimerBySegment.delete(segmentId);
-      flushSegment(segmentId, norm);
-    }, PAUSE_MS);
-    pauseTimerBySegment.set(segmentId, timer);
   }
 
   async function handleSegment(rawText, segmentId) {
-    const norm = normalize(rawText);
+    let norm;
+    try {
+    norm = normalize(rawText);
     if (!norm) return;
 
     clearPauseTimer(segmentId);
@@ -112,10 +122,12 @@ export function createRouter({ catalogEntries, liturgyCache, dedupGuard, speechQ
       const tail = words.slice(Math.min(flushedCount, words.length)).join(' ');
       dedupGuard.remember(norm);
       if (tail) {
-        const liveEn = await translatePtToEn(tail);
+        const { text: liveEn, reason } = await translatePtToEn(tail);
         if (liveEn) {
           speechQueue.speak(liveEn);
           onSegmentClassified?.({ rawText: tail, norm, kind: 'live-translate-tail', en: liveEn });
+        } else {
+          onSegmentClassified?.({ rawText: tail, norm, kind: 'translate-failed', reason });
         }
       }
       return;
@@ -164,13 +176,16 @@ export function createRouter({ catalogEntries, liturgyCache, dedupGuard, speechQ
     //    for them; handled implicitly by absence of a match.
 
     // 5. Unknown -> live translation fallback (R4), graceful on failure (R9).
-    const liveEn = await translatePtToEn(rawText);
+    const { text: liveEn, reason } = await translatePtToEn(rawText);
     dedupGuard.remember(norm);
     if (liveEn) {
       speechQueue.speak(liveEn);
       onSegmentClassified?.({ rawText, norm, kind: 'live-translate', en: liveEn });
     } else {
-      onSegmentClassified?.({ rawText, norm, kind: 'translate-failed' });
+      onSegmentClassified?.({ rawText, norm, kind: 'translate-failed', reason });
+    }
+    } catch (err) {
+      onSegmentClassified?.({ rawText, norm: norm ?? rawText, kind: 'error', reason: `handleSegment: ${err?.message ?? err}` });
     }
   }
 

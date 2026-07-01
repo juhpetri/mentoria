@@ -22,6 +22,16 @@ function logTranscript(line) {
   transcriptEl.scrollTop = transcriptEl.scrollHeight;
 }
 
+// Anything that slips through (an exception nobody caught, a rejected
+// promise nobody awaited) still shows up in the debug transcript instead of
+// silently dying in the console where the priest/worshipper can't see it.
+window.addEventListener('error', (event) => {
+  logTranscript(`ERROR: ${event.message}`);
+});
+window.addEventListener('unhandledrejection', (event) => {
+  logTranscript(`ERROR (unhandled): ${event.reason?.message ?? event.reason}`);
+});
+
 async function main() {
   setStatus('Loading...');
 
@@ -42,8 +52,8 @@ async function main() {
     liturgyCache,
     dedupGuard,
     speechQueue,
-    onSegmentClassified: ({ rawText, kind }) => {
-      logTranscript(`PT (${kind}): ${rawText}`);
+    onSegmentClassified: ({ rawText, kind, reason }) => {
+      logTranscript(reason ? `PT (${kind}): ${rawText} — ${reason}` : `PT (${kind}): ${rawText}`);
     },
   });
 
@@ -52,7 +62,10 @@ async function main() {
     stt = createSpeechToText({
       onFinalSegment: (text, segmentId) => router.handleSegment(text, segmentId),
       onInterim: (text, segmentId) => router.handleInterim(text, segmentId),
-      onError: (err) => setStatus(`Error: ${err}`),
+      onError: (err) => {
+        setStatus(`Error: ${err}`);
+        logTranscript(`ERROR (speech recognition): ${err}`);
+      },
     });
   } catch (err) {
     setStatus(err.message);
