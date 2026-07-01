@@ -12,6 +12,47 @@ const statusEl = document.getElementById('status');
 const transcriptEl = document.getElementById('transcript');
 const liveCaptionPtEl = document.getElementById('liveCaptionPt');
 const liveCaptionEnEl = document.getElementById('liveCaptionEn');
+const historyEl = document.getElementById('history');
+
+// Kinds from router.js that actually produce (or attempt) a spoken
+// translation — everything else (dropped duplicates, continuations of a
+// known text already spoken, sung/quiet moments, errors) has nothing new
+// to show in the permanent history.
+const HISTORY_KINDS = new Set(['catalog', 'reading', 'live-translate', 'live-translate-interim', 'live-translate-tail']);
+
+// Full running history of everything heard (PT) and translated (EN), shown
+// permanently on screen — unlike the live caption above, which is
+// overwritten as new speech comes in, this keeps every entry. Each PT
+// classification opens an entry; the next EN spoken fills it in, since
+// translation happens asynchronously after classification.
+const pendingHistoryEnEls = [];
+
+function appendHistoryPt(text) {
+  const entry = document.createElement('div');
+  entry.className = 'history-entry';
+  const ptLine = document.createElement('div');
+  ptLine.className = 'history-pt';
+  ptLine.textContent = text;
+  const enLine = document.createElement('div');
+  enLine.className = 'history-en';
+  entry.appendChild(ptLine);
+  entry.appendChild(enLine);
+  historyEl.appendChild(entry);
+  historyEl.scrollTop = historyEl.scrollHeight;
+  pendingHistoryEnEls.push(enLine);
+}
+
+function fillNextHistoryEn(text) {
+  let enLine = pendingHistoryEnEls.shift();
+  if (!enLine) {
+    // Spoken without a matching pending PT entry (shouldn't normally
+    // happen) — still show it rather than silently dropping it.
+    appendHistoryPt('');
+    enLine = pendingHistoryEnEls.shift();
+  }
+  enLine.textContent = text;
+  historyEl.scrollTop = historyEl.scrollHeight;
+}
 
 function setStatus(text) {
   statusEl.textContent = text;
@@ -52,6 +93,7 @@ async function main() {
     onSpeak: (text) => {
       logTranscript(`EN: ${text}`);
       setLiveCaptionEn(text);
+      fillNextHistoryEn(text);
     },
   });
   const dedupGuard = createDedupGuard();
@@ -70,6 +112,9 @@ async function main() {
     speechQueue,
     onSegmentClassified: ({ rawText, kind, reason }) => {
       logTranscript(reason ? `PT (${kind}): ${rawText} — ${reason}` : `PT (${kind}): ${rawText}`);
+      if (HISTORY_KINDS.has(kind)) {
+        appendHistoryPt(rawText);
+      }
     },
   });
 
@@ -114,6 +159,8 @@ async function main() {
     setLiveCaptionPt('');
     setLiveCaptionEn('');
     setStatus('Stopped.');
+    // History (unlike the live caption) intentionally stays on screen after
+    // Stop — it's the record of what was heard/translated this session.
     startBtn.disabled = false;
     stopBtn.disabled = true;
   });

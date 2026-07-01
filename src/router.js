@@ -79,14 +79,18 @@ export function createRouter({ catalogEntries, liturgyCache, dedupGuard, speechQ
   // the rest of the recitation is silently skipped instead of live-
   // translated. (R2, R3)
   function commitCatalogHit(catalogHit, rawText, norm, segmentId) {
-    speechQueue.speak(catalogHit.en);
     dedupGuard.remember(norm);
     if (catalogHit.pt) activeKnownTextNorm = normalize(catalogHit.pt);
     if (segmentId !== undefined) {
       committedSegments.add(segmentId);
       clearPauseTimer(segmentId);
     }
+    // Classify before speaking: callers (e.g. a full on-screen history)
+    // pair each PT entry with the next spoken EN text in order, so the
+    // "heard" entry must be recorded before speechQueue.speak fires
+    // onSpeak (which happens synchronously when the queue is empty).
     onSegmentClassified?.({ rawText, norm, kind: 'catalog', entry: catalogHit });
+    speechQueue.speak(catalogHit.en);
   }
 
   // Same idea for a day-specific reading (R36).
@@ -102,7 +106,6 @@ export function createRouter({ catalogEntries, liturgyCache, dedupGuard, speechQ
     }
     const en = await liturgyCache.getEnglishFor(reading);
     if (!en) return false; // translation failed -> let caller fall through to live path
-    speechQueue.speak(en);
     dedupGuard.remember(norm);
     if (reading.ptFull) activeKnownTextNorm = normalize(reading.ptFull);
     if (segmentId !== undefined) {
@@ -110,6 +113,7 @@ export function createRouter({ catalogEntries, liturgyCache, dedupGuard, speechQ
       clearPauseTimer(segmentId);
     }
     onSegmentClassified?.({ rawText, norm, kind: 'reading', reading });
+    speechQueue.speak(en);
     return true;
   }
 
@@ -126,8 +130,8 @@ export function createRouter({ catalogEntries, liturgyCache, dedupGuard, speechQ
 
     const { text: liveEn, reason } = await translatePtToEn(chunkText);
     if (liveEn) {
-      speechQueue.speak(liveEn);
       onSegmentClassified?.({ rawText: chunkText, norm: chunkText, kind: 'live-translate-interim', en: liveEn });
+      speechQueue.speak(liveEn);
     } else {
       onSegmentClassified?.({ rawText: chunkText, norm: chunkText, kind: 'translate-failed', reason });
     }
@@ -243,8 +247,8 @@ export function createRouter({ catalogEntries, liturgyCache, dedupGuard, speechQ
         if (tail) {
           const { text: liveEn, reason } = await translatePtToEn(tail);
           if (liveEn) {
-            speechQueue.speak(liveEn);
             onSegmentClassified?.({ rawText: tail, norm, kind: 'live-translate-tail', en: liveEn });
+            speechQueue.speak(liveEn);
           } else {
             onSegmentClassified?.({ rawText: tail, norm, kind: 'translate-failed', reason });
           }
@@ -286,8 +290,8 @@ export function createRouter({ catalogEntries, liturgyCache, dedupGuard, speechQ
       const { text: liveEn, reason } = await translatePtToEn(rawText);
       dedupGuard.remember(norm);
       if (liveEn) {
-        speechQueue.speak(liveEn);
         onSegmentClassified?.({ rawText, norm, kind: 'live-translate', en: liveEn });
+        speechQueue.speak(liveEn);
       } else {
         onSegmentClassified?.({ rawText, norm, kind: 'translate-failed', reason });
       }

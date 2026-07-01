@@ -166,6 +166,45 @@ button:disabled {
   min-height: 1.8em;
 }
 
+.history-panel {
+  margin-top: 24px;
+  background: #fff;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.history {
+  margin-top: 12px;
+  max-height: 420px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.history-entry {
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.history-entry:last-child {
+  border-bottom: none;
+}
+
+.history-pt {
+  font-size: 1rem;
+  font-style: italic;
+  color: #6b7280;
+}
+
+.history-en {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: #111827;
+  margin-top: 2px;
+}
+
 .transcript {
   margin-top: 12px;
   max-height: 220px;
