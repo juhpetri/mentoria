@@ -8,6 +8,40 @@
 const MYMEMORY_URL = 'https://api.mymemory.translated.net/get';
 const SOURCE_LANG = 'pt';
 const TARGET_LANG = 'en';
+// Registering an email with MyMemory raises the free daily quota from
+// 5,000 to 50,000 words/day (per MyMemory's own docs) — matters a lot on
+// a device where the native Translator API isn't available, since every
+// live-translation call then goes through MyMemory.
+const MYMEMORY_EMAIL = 'juliana.a.petri@gmail.com';
+// MyMemory also rate-limits *bursts* (HTTP 429), independent of the daily
+// quota — punctuation-triggered flushing can fire several short requests
+// within the same second. Space consecutive requests out and retry once
+// on 429 instead of dropping the segment outright.
+const MYMEMORY_MIN_GAP_MS = 400;
+const MYMEMORY_RETRY_DELAY_MS = 1200;
+
+let lastMyMemoryRequestAt = 0;
+let myMemoryQueue = Promise.resolve();
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// Serializes MyMemory calls so concurrent flushes (multiple segments
+// pausing around the same time) can't burst past the rate limit together.
+function throttleMyMemory(fn) {
+  const run = async () => {
+    const wait = MYMEMORY_MIN_GAP_MS - (Date.now() - lastMyMemoryRequestAt);
+    if (wait > 0) await sleep(wait);
+    lastMyMemoryRequestAt = Date.now();
+    return fn();
+  };
+  const result = myMemoryQueue.then(run, run);
+  // Keep the queue alive even if this call fails, so later calls aren't
+  // stuck behind a rejected promise.
+  myMemoryQueue = result.catch(() => {});
+  return result;
+}
 // Guards against Translator.create() hanging (e.g. stuck waiting on a
 // language-pack download or a permission prompt that never resolves) —
 // without this, a stuck native setup would silently block the MyMemory
@@ -72,23 +106,31 @@ export async function warmUpTranslator() {
 // Returns { text: null, reason: string } on failure so callers can surface
 // *why* nothing was spoken (network error, HTTP status, empty response,
 // etc.) in the debug transcript instead of a bare "translation failed".
+async function fetchMyMemory(text) {
+  const url = `${MYMEMORY_URL}?q=${encodeURIComponent(text)}&langpair=${SOURCE_LANG}|${TARGET_LANG}&de=${encodeURIComponent(MYMEMORY_EMAIL)}`;
+  const res = await fetch(url);
+  if (!res.ok) {
+    return { text: null, reason: `MyMemory HTTP ${res.status}`, status: res.status };
+  }
+  const data = await res.json();
+  const translated = data?.responseData?.translatedText;
+  if (!translated) {
+    return { text: null, reason: `MyMemory empty response (${data?.responseStatus ?? 'unknown status'})`, status: null };
+  }
+  return { text: translated, reason: null, status: null };
+}
+
 async function translateWithMyMemory(text) {
   try {
-    const url = `${MYMEMORY_URL}?q=${encodeURIComponent(text)}&langpair=${SOURCE_LANG}|${TARGET_LANG}`;
-    const res = await fetch(url);
-    if (!res.ok) {
-      const reason = `MyMemory HTTP ${res.status}`;
-      console.warn('[translate]', reason);
-      return { text: null, reason };
-    }
-    const data = await res.json();
-    const translated = data?.responseData?.translatedText;
-    if (!translated) {
-      const reason = `MyMemory empty response (${data?.responseStatus ?? 'unknown status'})`;
-      console.warn('[translate]', reason, data);
-      return { text: null, reason };
-    }
-    return { text: translated, reason: null };
+    return await throttleMyMemory(async () => {
+      const first = await fetchMyMemory(text);
+      if (first.text || first.status !== 429) return first;
+      // Rate-limited -> back off once and retry rather than dropping the
+      // segment (which would otherwise go untranslated during the Mass).
+      console.warn('[translate] MyMemory 429, retrying once after backoff');
+      await sleep(MYMEMORY_RETRY_DELAY_MS);
+      return fetchMyMemory(text);
+    });
   } catch (err) {
     const reason = `MyMemory request failed: ${err?.message ?? err}`;
     console.warn('[translate]', reason, err);
