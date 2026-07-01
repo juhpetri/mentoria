@@ -10,9 +10,22 @@ const startBtn = document.getElementById('startBtn');
 const stopBtn = document.getElementById('stopBtn');
 const statusEl = document.getElementById('status');
 const transcriptEl = document.getElementById('transcript');
+const liveCaptionPtEl = document.getElementById('liveCaptionPt');
+const liveCaptionEnEl = document.getElementById('liveCaptionEn');
 
 function setStatus(text) {
   statusEl.textContent = text;
+}
+
+// Mirrors how this chat's own voice dictation works: show the Portuguese
+// text as it's being recognized (updates live, in place), then show the
+// English translation once a piece of it is actually spoken — separate
+// from the collapsible debug transcript below, which keeps the full log.
+function setLiveCaptionPt(text) {
+  liveCaptionPtEl.textContent = text;
+}
+function setLiveCaptionEn(text) {
+  liveCaptionEnEl.textContent = text;
 }
 
 function logTranscript(line) {
@@ -36,7 +49,10 @@ async function main() {
   setStatus('Loading...');
 
   const speechQueue = createSpeechQueue({
-    onSpeak: (text) => logTranscript(`EN: ${text}`),
+    onSpeak: (text) => {
+      logTranscript(`EN: ${text}`);
+      setLiveCaptionEn(text);
+    },
   });
   const dedupGuard = createDedupGuard();
   const liturgyCache = createLiturgyCache();
@@ -60,8 +76,14 @@ async function main() {
   let stt;
   try {
     stt = createSpeechToText({
-      onFinalSegment: (text, segmentId) => router.handleSegment(text, segmentId),
-      onInterim: (text, segmentId) => router.handleInterim(text, segmentId),
+      onFinalSegment: (text, segmentId) => {
+        setLiveCaptionPt(text);
+        router.handleSegment(text, segmentId);
+      },
+      onInterim: (text, segmentId) => {
+        setLiveCaptionPt(text);
+        router.handleInterim(text, segmentId);
+      },
       onError: (err) => {
         setStatus(`Error: ${err}`);
         logTranscript(`ERROR (speech recognition): ${err}`);
@@ -89,6 +111,8 @@ async function main() {
     stt.stop();
     speechQueue.stop();
     router.reset();
+    setLiveCaptionPt('');
+    setLiveCaptionEn('');
     setStatus('Stopped.');
     startBtn.disabled = false;
     stopBtn.disabled = true;

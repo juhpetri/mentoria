@@ -147,6 +147,25 @@ button:disabled {
   font-weight: 700;
 }
 
+.live-caption {
+  margin-top: 16px;
+  min-height: 4.5em;
+}
+
+.live-caption-pt {
+  font-size: 1.15rem;
+  color: #6b7280;
+  font-style: italic;
+  min-height: 1.5em;
+}
+
+.live-caption-en {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #111827;
+  min-height: 1.8em;
+}
+
 .transcript {
   margin-top: 12px;
   max-height: 220px;
