@@ -14,49 +14,41 @@ import { translatePtToEn } from './translate.js';
 // still go through the precise catalog/reading matching in handleSegment.
 const INTERIM_CHUNK_WORDS = 6;
 
-function commonPrefixLen(a, b) {
-  const max = Math.min(a.length, b.length);
-  let i = 0;
-  while (i < max && a[i] === b[i]) i++;
-  return i;
-}
-
 export function createRouter({ catalogEntries, liturgyCache, dedupGuard, speechQueue, onSegmentClassified }) {
-  // How many words of the *current* utterance have already been streamed
-  // out via interim chunks, so the eventual final segment only speaks the
-  // still-unspoken tail instead of repeating everything from the start.
-  let streamedWordCount = 0;
-  // Words of the last interim hypothesis seen, so a revised hypothesis
-  // (Web Speech frequently rewrites its guess as more audio arrives) can be
-  // diffed against what was actually already spoken, instead of naively
-  // resetting to 0 and re-translating/re-speaking the whole thing again.
-  let lastWords = [];
+  // Fixed, monotonically-advancing word window: words 0-5 translated/spoken
+  // once, then 6-11, then 12-17, etc. Web Speech's interim hypothesis is
+  // unstable (it rewrites/reorders/drops words as more audio arrives), so
+  // diffing against the previous hypothesis kept producing repeat
+  // translations. Instead we commit each window permanently the first time
+  // it becomes available and never revisit it, even if a later interim
+  // revision changes those words -> no duplicate/overlapping speech, at the
+  // cost of occasionally locking in a window slightly before the engine's
+  // final wording. nextWordIndex is the index of the first not-yet-spoken
+  // word of the current utterance.
+  let nextWordIndex = 0;
 
   // Called on every interim (not-yet-final) STT result. Fires live
-  // translation early, in word-count chunks, so long continuous speech
+  // translation early, in fixed word windows, so long continuous speech
   // doesn't go silent until the priest pauses.
   async function handleInterim(rawText) {
     const norm = normalize(rawText);
     if (!norm) return;
     const words = norm.split(' ');
 
-    // The engine revised its hypothesis (or started a new utterance). Only
-    // the words still confirmed by the new hypothesis' common prefix count
-    // as "already streamed" -> never re-speak words that got revised away
-    // or that came before a reset, but never rewind past what's still there.
-    const common = commonPrefixLen(words, lastWords);
-    if (common < streamedWordCount) streamedWordCount = common;
-    lastWords = words;
+    // Hypothesis got shorter than what we already committed -> the engine
+    // started a new utterance (e.g. after a restart); resync forward.
+    if (words.length < nextWordIndex) nextWordIndex = words.length;
 
-    if (words.length - streamedWordCount < INTERIM_CHUNK_WORDS) return;
+    if (words.length - nextWordIndex < INTERIM_CHUNK_WORDS) return;
 
     // Cheap short-circuit: if this looks like a fixed/catalog phrase, let
     // handleSegment's precise matching handle it on the final event instead
     // of live-translating a partial match here.
     if (matchCatalog(catalogEntries, norm)) return;
 
-    const chunkWords = words.slice(streamedWordCount);
-    streamedWordCount = words.length;
+    const windowEnd = nextWordIndex + INTERIM_CHUNK_WORDS;
+    const chunkWords = words.slice(nextWordIndex, windowEnd);
+    nextWordIndex = windowEnd;
     const chunkText = chunkWords.join(' ');
 
     const liveEn = await translatePtToEn(chunkText);
@@ -74,15 +66,12 @@ export function createRouter({ catalogEntries, liturgyCache, dedupGuard, speechQ
     // chunks above, only the still-unspoken tail remains to handle here —
     // skip dedup/catalog/reading matching, which already happened (or
     // deliberately didn't apply) during streaming.
-    if (streamedWordCount > 0) {
+    if (nextWordIndex > 0) {
       const words = norm.split(' ');
-      // Final result can differ slightly from the last interim hypothesis;
-      // reuse the same common-prefix diff so we never re-speak confirmed words.
-      const common = commonPrefixLen(words, lastWords);
-      const confirmed = Math.min(streamedWordCount, common);
-      const tail = words.slice(confirmed).join(' ');
-      streamedWordCount = 0;
-      lastWords = [];
+      // Only the words beyond the last committed window remain unspoken;
+      // never revisit a window already spoken via handleInterim.
+      const tail = words.slice(Math.min(nextWordIndex, words.length)).join(' ');
+      nextWordIndex = 0;
       dedupGuard.remember(norm);
       if (tail) {
         const liveEn = await translatePtToEn(tail);
@@ -150,8 +139,7 @@ export function createRouter({ catalogEntries, liturgyCache, dedupGuard, speechQ
   // Called when the user manually stops (R9b) so leftover streaming state
   // from an interrupted utterance doesn't leak into the next session.
   function reset() {
-    streamedWordCount = 0;
-    lastWords = [];
+    nextWordIndex = 0;
   }
 
   return { handleSegment, handleInterim, reset };
