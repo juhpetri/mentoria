@@ -22,6 +22,7 @@ async function loadOneCatalog({ path, source }) {
     return Object.values(data).map((entry) => ({
       id: entry.id,
       keywords: entry.keywords ?? [],
+      pt: entry.pt,
       en: entry.textEn ?? entry.en,
       source,
     }));

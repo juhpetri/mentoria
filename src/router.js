@@ -32,6 +32,21 @@ export function createRouter({ catalogEntries, liturgyCache, dedupGuard, speechQ
   const flushedWordCountBySegment = new Map();
   const pauseTimerBySegment = new Map();
 
+  // A known text (Credo, a day-specific reading, etc.) gets its *entire*
+  // English translation spoken all at once the moment it's recognized. But
+  // the priest keeps reciting it out loud across several more STT segments
+  // (each new pause starts a fresh segment with no keyword match of its
+  // own), which used to fall through to word-by-word live translation —
+  // producing broken, context-free fragments of text that was *already*
+  // fully translated. While `activeKnownTextNorm` is set, any segment whose
+  // text is still contained in it is a continuation of the same known
+  // recitation and is silently ignored instead of live-translated.
+  let activeKnownTextNorm = null;
+
+  function isKnownContinuation(norm) {
+    return !!activeKnownTextNorm && norm.length > 0 && activeKnownTextNorm.includes(norm);
+  }
+
   function getFlushedCount(segmentId) {
     return flushedWordCountBySegment.get(segmentId) ?? 0;
   }
@@ -73,6 +88,11 @@ export function createRouter({ catalogEntries, liturgyCache, dedupGuard, speechQ
     try {
       const norm = normalize(rawText);
       if (!norm) return;
+
+      // Still reciting a known text (Credo, a reading, ...) that was
+      // already translated and spoken in full -> nothing new to say.
+      if (isKnownContinuation(norm)) return;
+
       const words = norm.split(' ');
 
       // Cheap short-circuit: if this looks like a fixed/catalog phrase, let
@@ -113,6 +133,17 @@ export function createRouter({ catalogEntries, liturgyCache, dedupGuard, speechQ
     const flushedCount = getFlushedCount(segmentId);
     flushedWordCountBySegment.delete(segmentId);
 
+    // Still reciting a known text -> nothing new to say. Once the segment's
+    // text stops matching (the recitation moved on to something else),
+    // isKnownContinuation naturally returns false and normal routing below
+    // takes over, including a fresh catalog/reading match if applicable.
+    if (isKnownContinuation(norm)) {
+      dedupGuard.remember(norm);
+      onSegmentClassified?.({ rawText, norm, kind: 'catalog-continuation' });
+      return;
+    }
+    activeKnownTextNorm = null;
+
     // If part of this segment was already streamed live (a pause was
     // detected mid-segment) only the still-unspoken tail remains to handle
     // here — skip dedup/catalog/reading matching, which already happened
@@ -148,6 +179,7 @@ export function createRouter({ catalogEntries, liturgyCache, dedupGuard, speechQ
     if (catalogHit) {
       speechQueue.speak(catalogHit.en);
       dedupGuard.remember(norm);
+      if (catalogHit.pt) activeKnownTextNorm = normalize(catalogHit.pt);
       onSegmentClassified?.({ rawText, norm, kind: 'catalog', entry: catalogHit });
       return;
     }
@@ -165,6 +197,7 @@ export function createRouter({ catalogEntries, liturgyCache, dedupGuard, speechQ
         if (en) {
           speechQueue.speak(en);
           dedupGuard.remember(norm);
+          if (reading.ptFull) activeKnownTextNorm = normalize(reading.ptFull);
           onSegmentClassified?.({ rawText, norm, kind: 'reading', reading });
           return;
         }
@@ -195,6 +228,7 @@ export function createRouter({ catalogEntries, liturgyCache, dedupGuard, speechQ
     for (const timer of pauseTimerBySegment.values()) clearTimeout(timer);
     pauseTimerBySegment.clear();
     flushedWordCountBySegment.clear();
+    activeKnownTextNorm = null;
   }
 
   return { handleSegment, handleInterim, reset };
