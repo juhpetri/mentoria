@@ -15,6 +15,11 @@ const OPENING_WORDS_COUNT = 6;
 // Facultativa". This keyword check is a heuristic over that text.
 const RANK_KEYWORDS = ['solenidade', 'festa', 'memoria'];
 
+// A single common word (e.g. "Deus") can appear inside almost any opening —
+// require a few words before treating it as a real match, so a one-word
+// fragment doesn't false-positive into a full reading.
+const MIN_MATCH_WORDS = 3;
+
 function pad2(n) {
   return String(n).padStart(2, '0');
 }
@@ -120,6 +125,7 @@ export function createLiturgyCache() {
   // No similarity scoring (R36). Covers readings, Coleta, Oferendas, and
   // Pós-Comunhão alike — they're all just { ptOpening, ptFull } entries here.
   function matchReading(normalizedText) {
+    if (!normalizedText || normalizedText.split(' ').length < MIN_MATCH_WORDS) return null;
     for (const item of dayTexts) {
       if (item.sung || !item.ptOpening) continue;
       if (normalizedText.includes(item.ptOpening) || item.ptOpening.includes(normalizedText)) {
@@ -132,9 +138,9 @@ export function createLiturgyCache() {
   // Lazy translate-on-first-match + cache (design note 6.1).
   async function getEnglishFor(reading) {
     if (reading.en) return reading.en;
-    const translated = await translatePtToEn(reading.ptFull);
-    if (translated) reading.en = translated;
-    return translated;
+    const { text } = await translatePtToEn(reading.ptFull);
+    if (text) reading.en = text;
+    return text;
   }
 
   // Mirrors catalogs.js's isPossibleCatalogPrefix: true if normalizedText
