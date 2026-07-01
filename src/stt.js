@@ -22,10 +22,16 @@ export function createSpeechToText({ onFinalSegment, onInterim, onError } = {}) 
     for (let i = event.resultIndex; i < event.results.length; i++) {
       const result = event.results[i];
       const transcript = result[0].transcript;
+      // Most engines (including Chrome on Android) report confidence as 0
+      // for every result, so this is only a signal when the engine actually
+      // fills it in — callers must treat 0 as "unknown", not "zero
+      // confidence". When it IS filled in, non-speech audio (instrumental
+      // music, humming) tends to produce low-confidence gibberish text.
+      const confidence = result[0].confidence;
       if (result.isFinal) {
-        onFinalSegment?.(transcript.trim(), i);
+        onFinalSegment?.(transcript.trim(), i, confidence);
       } else {
-        onInterim?.(transcript.trim(), i);
+        onInterim?.(transcript.trim(), i, confidence);
       }
     }
   };

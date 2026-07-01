@@ -60,8 +60,8 @@ async function main() {
   let stt;
   try {
     stt = createSpeechToText({
-      onFinalSegment: (text, segmentId) => router.handleSegment(text, segmentId),
-      onInterim: (text, segmentId) => router.handleInterim(text, segmentId),
+      onFinalSegment: (text, segmentId, confidence) => router.handleSegment(text, segmentId, confidence),
+      onInterim: (text, segmentId, confidence) => router.handleInterim(text, segmentId, confidence),
       onError: (err) => {
         setStatus(`Error: ${err}`);
         logTranscript(`ERROR (speech recognition): ${err}`);

@@ -34,6 +34,21 @@ const MIN_FLUSH_WORDS = 4;
 // MIN_FLUSH_WORDS above).
 const SENTENCE_END_RE = /[.!?:;]\s*$/;
 
+// No API here (translation or otherwise) can detect "this is instrumental
+// music" from audio — MyMemory/the native Translator only ever see text,
+// never the audio itself. The only signal available is SpeechRecognition's
+// own per-result confidence, and only on engines that actually fill it in
+// (Chrome commonly reports 0 for every result, meaning "not provided" —
+// that must NOT be treated as low confidence). When a real confidence value
+// is present and very low, it's usually the engine guessing at gibberish
+// over music/singing rather than transcribing real speech, so treat it as
+// "not speech" and hold off instead of speaking a nonsense translation.
+const LOW_CONFIDENCE_THRESHOLD = 0.3;
+
+function isLikelyNonSpeech(confidence) {
+  return typeof confidence === 'number' && confidence > 0 && confidence < LOW_CONFIDENCE_THRESHOLD;
+}
+
 export function createRouter({ catalogEntries, liturgyCache, dedupGuard, speechQueue, onSegmentClassified }) {
   // SpeechRecognition's result list holds several independent segments at
   // once (it splits continuous speech on detected pauses), each identified
@@ -144,12 +159,18 @@ export function createRouter({ catalogEntries, liturgyCache, dedupGuard, speechQ
   //      translating what's accumulated so far — so long continuous speech
   //      (a homily) still gets spoken at natural breaks instead of staying
   //      silent until isFinal fires, but without chopping mid-sentence.
-  async function handleInterim(rawText, segmentId) {
+  async function handleInterim(rawText, segmentId, confidence) {
     try {
       const norm = normalize(rawText);
       if (!norm) return;
 
       if (isKnownContinuation(norm) || committedSegments.has(segmentId)) return;
+
+      if (isLikelyNonSpeech(confidence)) {
+        clearPauseTimer(segmentId);
+        onSegmentClassified?.({ rawText, norm, kind: 'non-speech-skip', reason: `confidence ${confidence.toFixed(2)} — likely instrumental/non-speech audio` });
+        return;
+      }
 
       const catalogHit = matchCatalog(catalogEntries, norm);
       if (catalogHit) {
@@ -204,7 +225,7 @@ export function createRouter({ catalogEntries, liturgyCache, dedupGuard, speechQ
     }
   }
 
-  async function handleSegment(rawText, segmentId) {
+  async function handleSegment(rawText, segmentId, confidence) {
     let norm;
     try {
       norm = normalize(rawText);
@@ -213,6 +234,16 @@ export function createRouter({ catalogEntries, liturgyCache, dedupGuard, speechQ
       clearPauseTimer(segmentId);
       const flushedCount = getFlushedCount(segmentId);
       flushedWordCountBySegment.delete(segmentId);
+
+      // Nothing was already flushed for this segment and the engine itself
+      // is unsure it heard real speech -> most likely instrumental
+      // music/singing picked up as noise. Drop it silently rather than
+      // speaking a garbled "translation" of gibberish text.
+      if (flushedCount === 0 && isLikelyNonSpeech(confidence)) {
+        committedSegments.delete(segmentId);
+        onSegmentClassified?.({ rawText, norm, kind: 'non-speech-skip', reason: `confidence ${confidence.toFixed(2)} — likely instrumental/non-speech audio` });
+        return;
+      }
 
       // Already fully handled by an interim commit -> nothing left to do.
       if (committedSegments.has(segmentId)) {
