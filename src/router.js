@@ -1,7 +1,7 @@
 // The brain: classify each finalized transcript segment and dispatch.
 // Decision flow per design.md section 4. (R3, R4, R10, R36)
 import { normalize } from './normalize.js';
-import { matchCatalog } from './catalogs.js';
+import { matchCatalog, isPossibleCatalogPrefix } from './catalogs.js';
 import { translatePtToEn } from './translate.js';
 
 // How long the priest's speech has to go quiet (no new interim text for
@@ -31,16 +31,20 @@ export function createRouter({ catalogEntries, liturgyCache, dedupGuard, speechQ
   // (translated/spoken), and the pending pause-detection timer.
   const flushedWordCountBySegment = new Map();
   const pauseTimerBySegment = new Map();
+  // Segments whose *entire* content was already handled by an immediate
+  // catalog/reading commit fired from an interim event (see below) — when
+  // that segment eventually finalizes there's nothing left to do.
+  const committedSegments = new Set();
 
   // A known text (Credo, a day-specific reading, etc.) gets its *entire*
-  // English translation spoken all at once the moment it's recognized. But
-  // the priest keeps reciting it out loud across several more STT segments
-  // (each new pause starts a fresh segment with no keyword match of its
-  // own), which used to fall through to word-by-word live translation —
-  // producing broken, context-free fragments of text that was *already*
-  // fully translated. While `activeKnownTextNorm` is set, any segment whose
-  // text is still contained in it is a continuation of the same known
-  // recitation and is silently ignored instead of live-translated.
+  // pre-written English translation spoken all at once, the moment it's
+  // recognized — never live-translated word by word. The priest keeps
+  // reciting it out loud across several more STT segments (each new pause
+  // starts a fresh segment with no keyword of its own), so while
+  // `activeKnownTextNorm` is set, any segment whose text is still contained
+  // in it is a continuation of the same known recitation and is silently
+  // ignored — the app "goes back to listening" for what comes after the
+  // known text only once the recitation actually moves past it.
   let activeKnownTextNorm = null;
 
   function isKnownContinuation(norm) {
@@ -57,6 +61,45 @@ export function createRouter({ catalogEntries, liturgyCache, dedupGuard, speechQ
       clearTimeout(timer);
       pauseTimerBySegment.delete(segmentId);
     }
+  }
+
+  // Speaks a catalog entry's full pre-written translation immediately (used
+  // from both interim and final paths) and locks in "known text" mode so
+  // the rest of the recitation is silently skipped instead of live-
+  // translated. (R2, R3)
+  function commitCatalogHit(catalogHit, rawText, norm, segmentId) {
+    speechQueue.speak(catalogHit.en);
+    dedupGuard.remember(norm);
+    if (catalogHit.pt) activeKnownTextNorm = normalize(catalogHit.pt);
+    if (segmentId !== undefined) {
+      committedSegments.add(segmentId);
+      clearPauseTimer(segmentId);
+    }
+    onSegmentClassified?.({ rawText, norm, kind: 'catalog', entry: catalogHit });
+  }
+
+  // Same idea for a day-specific reading (R36).
+  async function commitReadingHit(reading, rawText, norm, segmentId) {
+    if (reading.sung) {
+      dedupGuard.remember(norm);
+      if (segmentId !== undefined) {
+        committedSegments.add(segmentId);
+        clearPauseTimer(segmentId);
+      }
+      onSegmentClassified?.({ rawText, norm, kind: 'sung-quiet' });
+      return true; // psalm sung -> stay quiet (R20)
+    }
+    const en = await liturgyCache.getEnglishFor(reading);
+    if (!en) return false; // translation failed -> let caller fall through to live path
+    speechQueue.speak(en);
+    dedupGuard.remember(norm);
+    if (reading.ptFull) activeKnownTextNorm = normalize(reading.ptFull);
+    if (segmentId !== undefined) {
+      committedSegments.add(segmentId);
+      clearPauseTimer(segmentId);
+    }
+    onSegmentClassified?.({ rawText, norm, kind: 'reading', reading });
+    return true;
   }
 
   // Translates/speaks whatever new words this segment has accumulated
@@ -79,27 +122,51 @@ export function createRouter({ catalogEntries, liturgyCache, dedupGuard, speechQ
     }
   }
 
-  // Called on every interim (not-yet-final) STT result. Debounces on
-  // PAUSE_MS of silence for this segment before translating what's
-  // accumulated so far — so long continuous speech (a homily) still gets
-  // spoken at natural breaks instead of staying silent until isFinal fires,
-  // but without chopping mid-sentence every few words.
+  // Called on every interim (not-yet-final) STT result.
+  //   1. If it's still building toward a known catalog/reading match, hold
+  //      off entirely (no live translation of a fragment that might turn
+  //      out to be the Credo, a reading, etc a moment later).
+  //   2. The instant it *becomes* a confirmed match, commit it immediately
+  //      (speak the correct pre-written translation) instead of waiting for
+  //      the segment to finalize.
+  //   3. Otherwise, debounce on PAUSE_MS of silence for this segment before
+  //      translating what's accumulated so far — so long continuous speech
+  //      (a homily) still gets spoken at natural breaks instead of staying
+  //      silent until isFinal fires, but without chopping mid-sentence.
   async function handleInterim(rawText, segmentId) {
     try {
       const norm = normalize(rawText);
       if (!norm) return;
 
-      // Still reciting a known text (Credo, a reading, ...) that was
-      // already translated and spoken in full -> nothing new to say.
-      if (isKnownContinuation(norm)) return;
+      if (isKnownContinuation(norm) || committedSegments.has(segmentId)) return;
+
+      const catalogHit = matchCatalog(catalogEntries, norm);
+      if (catalogHit) {
+        commitCatalogHit(catalogHit, rawText, norm, segmentId);
+        return;
+      }
+
+      const reading = liturgyCache?.matchReading(norm);
+      if (reading) {
+        clearPauseTimer(segmentId);
+        const handled = await commitReadingHit(reading, rawText, norm, segmentId);
+        if (handled) return;
+        // translation failed -> fall through to normal live-translate flow
+      }
+
+      // Text so far is consistent with the *start* of a known catalog
+      // entry or reading — wait for either a confirmed match above (next
+      // interim event) or segment finalization, rather than risking a
+      // broken live-translated fragment of what might be a fixed prayer.
+      if (
+        isPossibleCatalogPrefix(catalogEntries, norm) ||
+        liturgyCache?.isPossibleReadingPrefix(norm)
+      ) {
+        clearPauseTimer(segmentId);
+        return;
+      }
 
       const words = norm.split(' ');
-
-      // Cheap short-circuit: if this looks like a fixed/catalog phrase, let
-      // handleSegment's precise matching handle it on the final event instead
-      // of live-translating a partial match here.
-      if (matchCatalog(catalogEntries, norm)) return;
-
       clearPauseTimer(segmentId);
 
       const flushedCount = getFlushedCount(segmentId);
@@ -126,97 +193,90 @@ export function createRouter({ catalogEntries, liturgyCache, dedupGuard, speechQ
   async function handleSegment(rawText, segmentId) {
     let norm;
     try {
-    norm = normalize(rawText);
-    if (!norm) return;
+      norm = normalize(rawText);
+      if (!norm) return;
 
-    clearPauseTimer(segmentId);
-    const flushedCount = getFlushedCount(segmentId);
-    flushedWordCountBySegment.delete(segmentId);
+      clearPauseTimer(segmentId);
+      const flushedCount = getFlushedCount(segmentId);
+      flushedWordCountBySegment.delete(segmentId);
 
-    // Still reciting a known text -> nothing new to say. Once the segment's
-    // text stops matching (the recitation moved on to something else),
-    // isKnownContinuation naturally returns false and normal routing below
-    // takes over, including a fresh catalog/reading match if applicable.
-    if (isKnownContinuation(norm)) {
-      dedupGuard.remember(norm);
-      onSegmentClassified?.({ rawText, norm, kind: 'catalog-continuation' });
-      return;
-    }
-    activeKnownTextNorm = null;
+      // Already fully handled by an interim commit -> nothing left to do.
+      if (committedSegments.has(segmentId)) {
+        committedSegments.delete(segmentId);
+        return;
+      }
 
-    // If part of this segment was already streamed live (a pause was
-    // detected mid-segment) only the still-unspoken tail remains to handle
-    // here — skip dedup/catalog/reading matching, which already happened
-    // (or deliberately didn't apply) during streaming.
-    if (flushedCount > 0) {
-      const words = norm.split(' ');
-      const tail = words.slice(Math.min(flushedCount, words.length)).join(' ');
-      dedupGuard.remember(norm);
-      if (tail) {
-        const { text: liveEn, reason } = await translatePtToEn(tail);
-        if (liveEn) {
-          speechQueue.speak(liveEn);
-          onSegmentClassified?.({ rawText: tail, norm, kind: 'live-translate-tail', en: liveEn });
-        } else {
-          onSegmentClassified?.({ rawText: tail, norm, kind: 'translate-failed', reason });
+      // Still reciting a known text -> nothing new to say. Once the
+      // segment's text stops matching (the recitation moved on), this
+      // naturally returns false and normal routing below takes over,
+      // including a fresh catalog/reading match -> the app is effectively
+      // "listening again" for the next part of the Mass.
+      if (isKnownContinuation(norm)) {
+        dedupGuard.remember(norm);
+        onSegmentClassified?.({ rawText, norm, kind: 'catalog-continuation' });
+        return;
+      }
+      activeKnownTextNorm = null;
+
+      // If part of this segment was already streamed live (a pause was
+      // detected mid-segment) only the still-unspoken tail remains to
+      // handle here — skip dedup/catalog/reading matching, which already
+      // happened (or deliberately didn't apply) during streaming.
+      if (flushedCount > 0) {
+        const words = norm.split(' ');
+        const tail = words.slice(Math.min(flushedCount, words.length)).join(' ');
+        dedupGuard.remember(norm);
+        if (tail) {
+          const { text: liveEn, reason } = await translatePtToEn(tail);
+          if (liveEn) {
+            speechQueue.speak(liveEn);
+            onSegmentClassified?.({ rawText: tail, norm, kind: 'live-translate-tail', en: liveEn });
+          } else {
+            onSegmentClassified?.({ rawText: tail, norm, kind: 'translate-failed', reason });
+          }
+        }
+        return;
+      }
+
+      if (dedupGuard.isDuplicate(norm)) {
+        onSegmentClassified?.({ rawText, norm, kind: 'dropped-duplicate' });
+        return;
+      }
+
+      // Checked after isDuplicate so a cue segment ("repitam comigo...")
+      // never consumes its own bypass — the bypass is reserved for the
+      // *next* segment, i.e. the actual repeated phrase. (R10)
+      dedupGuard.noteIfRepeatCue(norm);
+
+      // 1 & 2. Ordinary fixed parts + Missal variants — instant, no network.
+      const catalogHit = matchCatalog(catalogEntries, norm);
+      if (catalogHit) {
+        commitCatalogHit(catalogHit, rawText, norm);
+        return;
+      }
+
+      // 3. Day-specific readings/psalm/gospel, verify-before-trust (R36).
+      if (liturgyCache) {
+        const reading = liturgyCache.matchReading(norm);
+        if (reading) {
+          const handled = await commitReadingHit(reading, rawText, norm);
+          if (handled) return;
+          // translation failed -> fall through to live path below
         }
       }
-      return;
-    }
 
-    if (dedupGuard.isDuplicate(norm)) {
-      onSegmentClassified?.({ rawText, norm, kind: 'dropped-duplicate' });
-      return;
-    }
+      // 4. Sung/hymn moments have no spoken trigger -> nothing reaches here
+      //    for them; handled implicitly by absence of a match.
 
-    // Checked after isDuplicate so a cue segment ("repitam comigo...") never
-    // consumes its own bypass — the bypass is reserved for the *next*
-    // segment, i.e. the actual repeated phrase. (R10)
-    dedupGuard.noteIfRepeatCue(norm);
-
-    // 1 & 2. Ordinary fixed parts + Missal variants — instant, no network.
-    const catalogHit = matchCatalog(catalogEntries, norm);
-    if (catalogHit) {
-      speechQueue.speak(catalogHit.en);
+      // 5. Unknown -> live translation fallback (R4), graceful on failure (R9).
+      const { text: liveEn, reason } = await translatePtToEn(rawText);
       dedupGuard.remember(norm);
-      if (catalogHit.pt) activeKnownTextNorm = normalize(catalogHit.pt);
-      onSegmentClassified?.({ rawText, norm, kind: 'catalog', entry: catalogHit });
-      return;
-    }
-
-    // 3. Day-specific readings/psalm/gospel, verify-before-trust (R36).
-    if (liturgyCache) {
-      const reading = liturgyCache.matchReading(norm);
-      if (reading) {
-        if (reading.sung) {
-          dedupGuard.remember(norm);
-          onSegmentClassified?.({ rawText, norm, kind: 'sung-quiet' });
-          return; // psalm sung -> stay quiet (R20)
-        }
-        const en = await liturgyCache.getEnglishFor(reading);
-        if (en) {
-          speechQueue.speak(en);
-          dedupGuard.remember(norm);
-          if (reading.ptFull) activeKnownTextNorm = normalize(reading.ptFull);
-          onSegmentClassified?.({ rawText, norm, kind: 'reading', reading });
-          return;
-        }
-        // translation failed -> fall through to live path below
+      if (liveEn) {
+        speechQueue.speak(liveEn);
+        onSegmentClassified?.({ rawText, norm, kind: 'live-translate', en: liveEn });
+      } else {
+        onSegmentClassified?.({ rawText, norm, kind: 'translate-failed', reason });
       }
-    }
-
-    // 4. Sung/hymn moments have no spoken trigger -> nothing reaches here
-    //    for them; handled implicitly by absence of a match.
-
-    // 5. Unknown -> live translation fallback (R4), graceful on failure (R9).
-    const { text: liveEn, reason } = await translatePtToEn(rawText);
-    dedupGuard.remember(norm);
-    if (liveEn) {
-      speechQueue.speak(liveEn);
-      onSegmentClassified?.({ rawText, norm, kind: 'live-translate', en: liveEn });
-    } else {
-      onSegmentClassified?.({ rawText, norm, kind: 'translate-failed', reason });
-    }
     } catch (err) {
       onSegmentClassified?.({ rawText, norm: norm ?? rawText, kind: 'error', reason: `handleSegment: ${err?.message ?? err}` });
     }
@@ -228,6 +288,7 @@ export function createRouter({ catalogEntries, liturgyCache, dedupGuard, speechQ
     for (const timer of pauseTimerBySegment.values()) clearTimeout(timer);
     pauseTimerBySegment.clear();
     flushedWordCountBySegment.clear();
+    committedSegments.clear();
     activeKnownTextNorm = null;
   }
 

@@ -1,5 +1,6 @@
 // Loads catalog.ordinary + catalog.missal JSON files into one flat, sorted
 // list for matching. (R2, R30, R38)
+import { normalize } from './normalize.js';
 //
 // Coleta and Pós-Comunhão are NOT here — those are day-specific and now
 // sourced live from the Liturgia API (see liturgyApi.js, R39a/R39f), not
@@ -23,6 +24,7 @@ async function loadOneCatalog({ path, source }) {
       id: entry.id,
       keywords: entry.keywords ?? [],
       pt: entry.pt,
+      ptNorm: entry.pt ? normalize(entry.pt) : null,
       en: entry.textEn ?? entry.en,
       source,
     }));
@@ -54,4 +56,15 @@ export function matchCatalog(entries, normalizedText) {
     }
   }
   return null;
+}
+
+// True if `normalizedText` is consistent with being the still-incomplete
+// start of some catalog entry's full Portuguese text — i.e. everything
+// recognized so far exactly matches that entry's opening. Used to hold off
+// live-translating a fragment (e.g. "deus pai todo pode" before the STT
+// engine finishes recognizing "poderoso") while it might still resolve
+// into a known/fixed prayer a moment later. (R2, R3)
+export function isPossibleCatalogPrefix(entries, normalizedText) {
+  if (!normalizedText) return false;
+  return entries.some((entry) => entry.ptNorm && entry.ptNorm.startsWith(normalizedText));
 }

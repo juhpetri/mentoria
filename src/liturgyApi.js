@@ -47,7 +47,7 @@ function hasSpecialRank(celebration) {
 
 function pushDayText(list, id, text) {
   if (!text) return;
-  list.push({ id, ptOpening: openingWords(text), ptFull: text, en: null, sung: false });
+  list.push({ id, ptOpening: openingWords(text), ptFull: text, ptFullNorm: normalize(text), en: null, sung: false });
 }
 
 // celebration.leituras is an ordered array of { tipo, rotulo, opcoes }; each
@@ -137,5 +137,14 @@ export function createLiturgyCache() {
     return translated;
   }
 
-  return { fetchToday, matchReading, getEnglishFor };
+  // Mirrors catalogs.js's isPossibleCatalogPrefix: true if normalizedText
+  // is consistent with being the still-incomplete start of a day-specific
+  // reading, so live translation can hold off instead of speaking broken
+  // fragments while the recognizer is still finishing the opening words.
+  function isPossibleReadingPrefix(normalizedText) {
+    if (!normalizedText) return false;
+    return dayTexts.some((item) => !item.sung && item.ptFullNorm && item.ptFullNorm.startsWith(normalizedText));
+  }
+
+  return { fetchToday, matchReading, getEnglishFor, isPossibleReadingPrefix };
 }
