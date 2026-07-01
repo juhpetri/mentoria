@@ -4,6 +4,7 @@ import { createDedupGuard } from './dedup.js';
 import { loadCatalog } from './catalogs.js';
 import { createLiturgyCache } from './liturgyApi.js';
 import { createRouter } from './router.js';
+import { warmUpTranslator } from './translate.js';
 
 const startBtn = document.getElementById('startBtn');
 const stopBtn = document.getElementById('stopBtn');
@@ -33,6 +34,7 @@ async function main() {
   const [catalogEntries] = await Promise.all([
     loadCatalog(),
     liturgyCache.fetchToday(),
+    warmUpTranslator(), // any on-device language-pack download happens now
   ]);
 
   const router = createRouter({
@@ -49,6 +51,7 @@ async function main() {
   try {
     stt = createSpeechToText({
       onFinalSegment: (text) => router.handleSegment(text),
+      onInterim: (text) => router.handleInterim(text),
       onError: (err) => setStatus(`Error: ${err}`),
     });
   } catch (err) {
@@ -72,6 +75,7 @@ async function main() {
     // speech — not "after the current sentence finishes." (R9b)
     stt.stop();
     speechQueue.stop();
+    router.reset();
     setStatus('Stopped.');
     startBtn.disabled = false;
     stopBtn.disabled = true;
