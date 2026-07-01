@@ -54,7 +54,7 @@ HTTP API.
 | `catalog.ordinary` | Static catalog of the fixed Ordinary parts (today's `liturgy.js`), keyword → {EN title, EN text, explanation}. | R2, R11 |
 | `catalog.missal` | Indexed JSON catalogs sourced from the Missal PDF: `prefacio`, `oracao-eucaristica`, `rito-comunhao`, `credo`. Keyword(opening words) → {PT, EN}. (Coleta/Oferendas/Pós-Comunhão moved to `liturgy` below.) | R30, R38, R39, R40, R41 |
 | `liturgy` | On startup, fetch the day's liturgy (readings/psalm/gospel + Coleta/Oferendas/Pós-Comunhão) from Liturgia API v3, cache in memory. | R35, R37, R39a, R39e, R39f |
-| `translate` | Live PT→EN via MyMemory, used only on the unknown/fallback path. Handles failure gracefully. | R4, R9 |
+| `translate` | Live PT→EN, used on the unknown/fallback path and every interim homily chunk. Chrome's on-device Translator API by default, MyMemory fallback. Handles failure gracefully. | R4, R9 |
 | `speech` | Serialized speech queue + TTS playback; supports immediate flush/stop. | R5, R9b |
 | `ui` | Minimal: Start/Stop control, status indicator, collapsed debug transcript. Audio-first. | R6, R7, R9b |
 
@@ -219,9 +219,11 @@ Key points:
    has no liturgy at all). Non-Saturday days are unaffected — they fetch their own
    date as before.
 
-## 7. Tech Choices (unchanged from spec)
+## 7. Tech Choices
 
 STT = Web Speech API (pt-BR); TTS = Web Speech Synthesis (en-US); live translation =
-MyMemory; day liturgy = Liturgia API v3; static hosting, no build step, no backend.
-See `spec.md` Tech Stack table and Constraints for rationale and risks (iOS/Safari STT
-risk, network dependency, MyMemory rate limits, no speaker diarization).
+Chrome on-device Translator API by default, MyMemory as fallback (see spec.md
+"Translation Source — Hybrid Native/MyMemory — RESOLVED"); day liturgy = Liturgia API
+v3; static hosting, no build step, no backend. See `spec.md` Tech Stack table and
+Constraints for rationale and risks (iOS/Safari STT risk, network dependency, MyMemory
+rate limits, no speaker diarization).

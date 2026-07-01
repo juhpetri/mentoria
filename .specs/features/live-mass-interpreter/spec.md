@@ -61,7 +61,7 @@ time, synchronized closely enough with the live celebration to respond when expe
 |---------|--------|-----|
 | Speech-to-text (priest's Portuguese) | Browser `SpeechRecognition` / `webkitSpeechRecognition` (Web Speech API), `lang=pt-BR`, `continuous + interimResults` | Built into Chrome, no install, no API key, free, runs client-side. |
 | Fixed-part catalog | Static JS data (`liturgy.js`) — keywords + pre-authored EN text | No runtime cost, fully reviewable/editable by a human (e.g. a priest or catechist), easy to add seasons/feasts later. |
-| Translation (variable text) | MyMemory free HTTP API (`api.mymemory.translated.net`), `pt\|en` | No key required, good enough for a prototype; explicitly NOT production-grade — see R9 and Constraints. |
+| Translation (variable text) | **Hybrid**: Chrome's on-device Translator API (`pt`→`en`) as default, MyMemory free HTTP API (`api.mymemory.translated.net`, `pt\|en`) as fallback | See "Translation Source — Hybrid Native/MyMemory — RESOLVED" below. No key required either way; explicitly NOT production-grade — see R9 and Constraints. |
 | Text-to-speech (English output) | Browser `SpeechSynthesisUtterance` (Web Speech Synthesis API), `lang=en-US` | Built-in, free, low latency, no extra round-trip once text is known. |
 | Hosting/runtime | Static HTML/CSS/JS, no backend, no build step | Matches R7 (no-install, link/QR access); can be hosted on GitHub Pages or any static host. |
 | Platform | Mobile Chrome (primary target) | Web Speech API support is inconsistent across browsers; Chrome/Chromium has the most reliable implementation on Android. Safari/iOS support is partial — see Constraints. |
@@ -479,6 +479,25 @@ still go through the normal precise catalog/reading matching. Increases MyMemory
 volume during long continuous speech (more, smaller translation requests) — acceptable
 tradeoff for a prototype; revisit if the free-tier rate limit (R9 constraint) becomes a
 problem in practice.
+
+## Translation Source — Hybrid Native/MyMemory — RESOLVED
+
+Volume analysis prompted this decision: 4 Masses/week × ~40min of continuous homily
+each, chunked every 6 words (per the interim-streaming fix above), easily produces
+3,000+ translation calls/week from homily alone — enough to exceed MyMemory's free
+daily quota (5,000 chars/day anonymous, 50,000/day with email registration) well before
+a single week is over.
+
+**Decision**: `translate.js` now tries the browser's on-device Translator API
+(`pt`→`en`) first — no network call, no rate limit, ideal for this volume and for
+church wifi/cellular unreliability (Constraints) — and only falls back to MyMemory when
+the native API is unsupported/unavailable on that device (e.g. non-Chrome browser,
+language pack not downloaded, older Chrome version). The language-pack download (if
+needed) is triggered once at app startup (`warmUpTranslator()`, alongside the catalog
+and day-liturgy fetch), so it happens before Mass starts rather than stalling the first
+live segment. This is a strict quality improvement over MyMemory-only with no scope
+cost: same function signature, same fail-open behavior (R9), callers (`router.js`,
+`liturgyApi.js`) are unaffected.
 
 ## Success Metrics (manual, prototype stage)
 - A volunteer who doesn't speak Portuguese can sit through one full Mass with the app
