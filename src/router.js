@@ -4,58 +4,47 @@ import { normalize } from './normalize.js';
 import { matchCatalog } from './catalogs.js';
 import { translatePtToEn } from './translate.js';
 
-// Continuous speech (e.g. a homily) can run many seconds without a pause,
-// and the STT engine's `isFinal` result only fires on a pause — waiting for
-// it means the worshipper hears nothing the whole time the priest is
-// talking. Fix: chunk the *interim* (not-yet-final) transcript by word
-// count and translate/speak each new chunk as it arrives, instead of
-// waiting for isFinal. Short utterances (greetings, responses, fixed parts)
-// finalize before ever reaching this threshold, so they're unaffected and
-// still go through the precise catalog/reading matching in handleSegment.
-const INTERIM_CHUNK_WORDS = 6;
+// How long the priest's speech has to go quiet (no new interim text for
+// this segment) before we treat it as a pause and translate/speak
+// whatever's accumulated since the last flush — mirrors how a human
+// interpreter waits for a natural break rather than cutting mid-thought.
+const PAUSE_MS = 900;
+
+// Safety net for a homily that runs on for a long stretch with no detected
+// pause at all: force a flush after this many unflushed words so the
+// worshipper isn't left waiting indefinitely for translation to start.
+const MAX_UNFLUSHED_WORDS = 25;
 
 export function createRouter({ catalogEntries, liturgyCache, dedupGuard, speechQueue, onSegmentClassified }) {
   // SpeechRecognition's result list holds several independent segments at
   // once (it splits continuous speech on detected pauses), each identified
-  // by a stable `segmentId` (event.resultIndex) until it finalizes. Each
-  // segment gets its own fixed, monotonically-advancing word window: words
-  // 0-5 translated/spoken once, then 6-11, then 12-17, etc, committed
-  // permanently the first time available and never revisited — even if a
-  // later interim revision changes those words — so segments never
-  // interleave into each other and no window is ever spoken twice.
-  const nextWordIndexBySegment = new Map();
+  // by a stable `segmentId` (event.resultIndex) until it finalizes. Per
+  // segment we track: how many words have already been flushed
+  // (translated/spoken), and the pending pause-detection timer.
+  const flushedWordCountBySegment = new Map();
+  const pauseTimerBySegment = new Map();
 
-  function getNextWordIndex(segmentId) {
-    return nextWordIndexBySegment.get(segmentId) ?? 0;
+  function getFlushedCount(segmentId) {
+    return flushedWordCountBySegment.get(segmentId) ?? 0;
   }
 
-  // Called on every interim (not-yet-final) STT result. Fires live
-  // translation early, in fixed word windows, so long continuous speech
-  // doesn't go silent until the priest pauses.
-  async function handleInterim(rawText, segmentId) {
-    const norm = normalize(rawText);
-    if (!norm) return;
-    const words = norm.split(' ');
-    let nextWordIndex = getNextWordIndex(segmentId);
-
-    // Hypothesis got shorter than what we already committed for this
-    // segment -> resync forward rather than rewinding into already-spoken
-    // territory.
-    if (words.length < nextWordIndex) nextWordIndex = words.length;
-
-    if (words.length - nextWordIndex < INTERIM_CHUNK_WORDS) {
-      nextWordIndexBySegment.set(segmentId, nextWordIndex);
-      return;
+  function clearPauseTimer(segmentId) {
+    const timer = pauseTimerBySegment.get(segmentId);
+    if (timer) {
+      clearTimeout(timer);
+      pauseTimerBySegment.delete(segmentId);
     }
+  }
 
-    // Cheap short-circuit: if this looks like a fixed/catalog phrase, let
-    // handleSegment's precise matching handle it on the final event instead
-    // of live-translating a partial match here.
-    if (matchCatalog(catalogEntries, norm)) return;
+  // Translates/speaks whatever new words this segment has accumulated
+  // since its last flush, and advances its flushed-word cursor.
+  async function flushSegment(segmentId, norm) {
+    const words = norm.split(' ');
+    const flushedCount = getFlushedCount(segmentId);
+    if (words.length <= flushedCount) return;
 
-    const windowEnd = nextWordIndex + INTERIM_CHUNK_WORDS;
-    const chunkWords = words.slice(nextWordIndex, windowEnd);
-    nextWordIndexBySegment.set(segmentId, windowEnd);
+    const chunkWords = words.slice(flushedCount);
+    flushedWordCountBySegment.set(segmentId, words.length);
     const chunkText = chunkWords.join(' ');
 
     const liveEn = await translatePtToEn(chunkText);
@@ -65,20 +54,51 @@ export function createRouter({ catalogEntries, liturgyCache, dedupGuard, speechQ
     }
   }
 
+  // Called on every interim (not-yet-final) STT result. Debounces on
+  // PAUSE_MS of silence for this segment before translating what's
+  // accumulated so far — so long continuous speech (a homily) still gets
+  // spoken at natural breaks instead of staying silent until isFinal fires,
+  // but without chopping mid-sentence every few words.
+  async function handleInterim(rawText, segmentId) {
+    const norm = normalize(rawText);
+    if (!norm) return;
+    const words = norm.split(' ');
+
+    // Cheap short-circuit: if this looks like a fixed/catalog phrase, let
+    // handleSegment's precise matching handle it on the final event instead
+    // of live-translating a partial match here.
+    if (matchCatalog(catalogEntries, norm)) return;
+
+    clearPauseTimer(segmentId);
+
+    const flushedCount = getFlushedCount(segmentId);
+    if (words.length - flushedCount >= MAX_UNFLUSHED_WORDS) {
+      await flushSegment(segmentId, norm);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      pauseTimerBySegment.delete(segmentId);
+      flushSegment(segmentId, norm);
+    }, PAUSE_MS);
+    pauseTimerBySegment.set(segmentId, timer);
+  }
+
   async function handleSegment(rawText, segmentId) {
     const norm = normalize(rawText);
     if (!norm) return;
 
-    const nextWordIndex = getNextWordIndex(segmentId);
-    nextWordIndexBySegment.delete(segmentId);
+    clearPauseTimer(segmentId);
+    const flushedCount = getFlushedCount(segmentId);
+    flushedWordCountBySegment.delete(segmentId);
 
-    // If part of this segment was already streamed live via interim
-    // chunks above, only the still-unspoken tail remains to handle here —
-    // skip dedup/catalog/reading matching, which already happened (or
-    // deliberately didn't apply) during streaming.
-    if (nextWordIndex > 0) {
+    // If part of this segment was already streamed live (a pause was
+    // detected mid-segment) only the still-unspoken tail remains to handle
+    // here — skip dedup/catalog/reading matching, which already happened
+    // (or deliberately didn't apply) during streaming.
+    if (flushedCount > 0) {
       const words = norm.split(' ');
-      const tail = words.slice(Math.min(nextWordIndex, words.length)).join(' ');
+      const tail = words.slice(Math.min(flushedCount, words.length)).join(' ');
       dedupGuard.remember(norm);
       if (tail) {
         const liveEn = await translatePtToEn(tail);
@@ -146,7 +166,9 @@ export function createRouter({ catalogEntries, liturgyCache, dedupGuard, speechQ
   // Called when the user manually stops (R9b) so leftover streaming state
   // from interrupted segments doesn't leak into the next session.
   function reset() {
-    nextWordIndexBySegment.clear();
+    for (const timer of pauseTimerBySegment.values()) clearTimeout(timer);
+    pauseTimerBySegment.clear();
+    flushedWordCountBySegment.clear();
   }
 
   return { handleSegment, handleInterim, reset };
