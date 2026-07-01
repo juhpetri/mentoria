@@ -117,6 +117,18 @@ policy (R2).
 
 ## 4. Router Decision Flow (per finalized transcript segment)
 
+**Interim streaming (added — see spec.md "R8-adjacent — Continuous Speech Silence
+Gap").** The flow below runs on `isFinal` results, but `isFinal` alone leaves long
+continuous speech (a homily) silent for its whole duration. A parallel, simpler path
+runs on every *interim* result: `handleInterim` chunks the growing transcript by word
+count (`INTERIM_CHUNK_WORDS = 12`) and speaks each new chunk via live translation as
+soon as it accumulates, tracking a `streamedWordCount` offset. When `isFinal` then
+fires, `handleSegment` checks that offset first — if part of the utterance was already
+streamed, it only translates/speaks the unspoken tail and skips straight past dedup/
+catalog/reading matching (steps 1–3 below), since those only make sense for short,
+not-yet-streamed utterances (fixed parts/responses/readings finalize quickly, before
+ever reaching the 12-word threshold, so they're unaffected).
+
 ```
 on finalSegment(text):
     norm = normalize(text)

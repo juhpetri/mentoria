@@ -30,7 +30,7 @@ time, synchronized closely enough with the live celebration to respond when expe
 | R5 | Spoken English output SHALL be queued so overlapping segments do not talk over each other. | Done (`speechQueue` / `pumpSpeechQueue`) |
 | R6 | The interface SHALL foreground audio as the primary experience; any on-screen text is secondary/debug, not the primary way of following Mass. | Done (`index.html` — transcript is inside a collapsed `<details>`) |
 | R7 | The app SHALL run as a no-install web page accessible via a link/QR code, requiring only microphone permission. | Done (static HTML/JS/CSS, no backend) |
-| R8 | The Preface's variable body SHALL be translated with sentence boundaries that don't choppily cut mid-clause more often than the current naive `isFinal`-boundary approach. | **Open — not yet resolved** |
+| R8 | The Preface's variable body SHALL be translated with sentence boundaries that don't choppily cut mid-clause more often than the current naive `isFinal`-boundary approach. | **Open — not yet resolved** (sentence-boundary smoothness). Related silence problem (audio going quiet for the whole duration of continuous speech, e.g. a homily, until `isFinal` fires) fixed separately — see "R8-adjacent — Continuous Speech (Homily) Silence Gap" below. |
 | R9 | If the translation API call fails or is rate-limited, the app SHALL degrade gracefully (e.g. skip that segment, optionally notify) rather than silently losing audio with no indication. | **Open — not yet resolved** |
 | R9b | The app SHALL provide a way to **stop the translation** at any moment (manual stop control) — stopping both listening and any queued/in-progress spoken output immediately, so the worshipper can silence it when desired. | **RESOLVED (requirement) — see decision below; not yet implemented.** |
 | R10 | The app SHALL avoid re-translating/re-speaking duplicate or overlapping finalized transcript segments, **except** when the priest explicitly asks the assembly to repeat a phrase — in that case the repetition SHALL be translated/spoken again. | **RESOLVED (requirement) — see decision below; not yet implemented.** |
@@ -458,6 +458,27 @@ already-resolved decisions, not further decision-making.)
   duplicate. Open design sub-question for implementation: how to detect "the priest asked
   for a repeat" — likely a keyword cue ("repitam", "repita comigo", "todos juntos", etc.)
   that temporarily disables the dedup guard for the next utterance.
+
+## R8-adjacent — Continuous Speech (Homily) Silence Gap — RESOLVED
+
+User-reported real-world testing bug: during a homily, the priest speaks continuously
+with few long pauses; since `router.js` only translated on the STT engine's `isFinal`
+event (which itself only fires on a pause), the worshipper heard nothing at all for
+the entire duration of continuous speech, not just choppy mid-clause cuts (R8's
+original framing).
+
+**Fix**: use the *interim* (not-yet-final) results the Web Speech API already emits
+continuously, not just the final one. `router.js`'s `handleInterim()` chunks the
+growing interim transcript by word count (`INTERIM_CHUNK_WORDS = 12`) and
+translates/speaks each new chunk as soon as it accumulates, without waiting for
+`isFinal`. When `isFinal` does eventually arrive, `handleSegment()` only speaks
+whatever tail wasn't already streamed (tracked via a word-count offset), instead of
+re-speaking the whole utterance. Short utterances (greetings, responses, fixed Ordinary
+parts) finalize before ever reaching the 12-word threshold, so they're unaffected and
+still go through the normal precise catalog/reading matching. Increases MyMemory call
+volume during long continuous speech (more, smaller translation requests) — acceptable
+tradeoff for a prototype; revisit if the free-tier rate limit (R9 constraint) becomes a
+problem in practice.
 
 ## Success Metrics (manual, prototype stage)
 - A volunteer who doesn't speak Portuguese can sit through one full Mass with the app
