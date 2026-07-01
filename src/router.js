@@ -8,19 +8,30 @@ import { translatePtToEn } from './translate.js';
 // this segment) before we treat it as a pause and translate/speak
 // whatever's accumulated since the last flush — mirrors how a human
 // interpreter waits for a natural break rather than cutting mid-thought.
-const PAUSE_MS = 400;
+// Kept fairly generous (rather than reacting to every tiny gap) so noisy
+// audio (background chatter, a second voice, a poor connection) doesn't
+// fragment one sentence into several disjointed, sometimes-repeated
+// translations — better to wait for a real pause than guess early.
+const PAUSE_MS = 700;
 
 // Safety net for a homily that runs on for a long stretch with no detected
 // pause at all: force a flush after this many unflushed words so the
 // worshipper isn't left waiting indefinitely for translation to start.
 const MAX_UNFLUSHED_WORDS = 25;
 
+// Never flush fewer than this many unflushed words, even on a detected
+// pause/sentence-end — a 1-2 word fragment ("santo.", "vocês") is rarely
+// translatable in isolation and is usually a sign of choppy/noisy
+// recognition rather than an intentional short sentence.
+const MIN_FLUSH_WORDS = 4;
+
 // pt-BR SpeechRecognition punctuates its own hypothesis (periods, commas,
 // colons) at natural clause/sentence breaks — a much more reliable pause
 // signal than a fixed silence timeout, since real speech pauses (e.g.
 // mid-liturgy) are often shorter than any timeout we could safely pick.
 // When the *raw* (pre-normalize) hypothesis ends in one of these, flush
-// immediately instead of waiting out the debounce.
+// immediately instead of waiting out the debounce (still subject to
+// MIN_FLUSH_WORDS above).
 const SENTENCE_END_RE = /[.!?:;]\s*$/;
 
 export function createRouter({ catalogEntries, liturgyCache, dedupGuard, speechQueue, onSegmentClassified }) {
@@ -170,16 +181,19 @@ export function createRouter({ catalogEntries, liturgyCache, dedupGuard, speechQ
       clearPauseTimer(segmentId);
 
       const flushedCount = getFlushedCount(segmentId);
-      if (
-        words.length - flushedCount >= MAX_UNFLUSHED_WORDS ||
-        SENTENCE_END_RE.test(rawText.trim())
-      ) {
+      const unflushedCount = words.length - flushedCount;
+      if (unflushedCount >= MAX_UNFLUSHED_WORDS) {
+        await flushSegment(segmentId, norm);
+        return;
+      }
+      if (unflushedCount >= MIN_FLUSH_WORDS && SENTENCE_END_RE.test(rawText.trim())) {
         await flushSegment(segmentId, norm);
         return;
       }
 
       const timer = setTimeout(() => {
         pauseTimerBySegment.delete(segmentId);
+        if (words.length - getFlushedCount(segmentId) < MIN_FLUSH_WORDS) return;
         flushSegment(segmentId, norm).catch((err) => {
           onSegmentClassified?.({ rawText, norm, kind: 'error', reason: `handleInterim (debounced flush): ${err?.message ?? err}` });
         });

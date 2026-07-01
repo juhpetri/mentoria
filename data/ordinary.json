@@ -4,6 +4,7 @@
     "keywords": [
       "em nome do pai e do filho e do espirito santo"
     ],
+    "pt": "Em nome do Pai, e do Filho, e do Espírito Santo.",
     "titleEn": "Sign of the Cross",
     "textEn": "In the name of the Father, and of the Son, and of the Holy Spirit. — Amen.",
     "explanation": "Opens the Mass. The whole assembly responds 'Amen' together."
@@ -15,6 +16,7 @@
       "estejam convosco",
       "a graca de nosso senhor jesus cristo"
     ],
+    "pt": "O Senhor esteja convosco.",
     "titleEn": "Greeting dialogue (recurs throughout Mass)",
     "textEn": "Priest: \"The Lord be with you.\" — Your response: \"And with your spirit.\"",
     "explanation": "This exact exchange repeats at several moments (opening greeting, before the Gospel, before the Preface, before the final blessing) — the assembly's response is always the same."
@@ -24,6 +26,7 @@
     "keywords": [
       "oremos"
     ],
+    "pt": "Oremos.",
     "titleEn": "Let us pray",
     "textEn": "Let us pray.",
     "explanation": "Cue said before the Collect, the prayer over the offerings, and the prayer after Communion — the prayer text itself is proper to the day and is translated live, not pre-scripted."
@@ -34,6 +37,7 @@
       "proclamacao do evangelho de jesus cristo segundo",
       "evangelho de nosso senhor jesus cristo segundo"
     ],
+    "pt": "Proclamação do Evangelho de Jesus Cristo segundo",
     "titleEn": "Gospel announcement",
     "textEn": "Priest: \"A reading from the holy Gospel.\" — Your response: \"Glory to you, O Lord.\"",
     "explanation": "Said standing, with a small sign of the cross on forehead, lips, and heart. The Gospel text itself that follows is translated live."
@@ -43,6 +47,7 @@
     "keywords": [
       "palavra da salvacao"
     ],
+    "pt": "Palavra da salvação.",
     "titleEn": "Gospel conclusion",
     "textEn": "Priest: \"The Gospel of the Lord.\" — Your response: \"Praise to you, Lord Jesus Christ.\"",
     "explanation": "Closes the Gospel reading."
@@ -52,6 +57,7 @@
     "keywords": [
       "palavra do senhor"
     ],
+    "pt": "Palavra do Senhor.",
     "titleEn": "Reading conclusion",
     "textEn": "Reader: \"The word of the Lord.\" — Your response: \"Thanks be to God.\"",
     "explanation": "Closes the First Reading and the Second Reading (not the Gospel, which has its own response — see evangelho-conclusao). The reading body itself is translated live."
@@ -62,6 +68,7 @@
       "orai irmaos e irmas",
       "orai irmaos para que o meu e o vosso sacrificio"
     ],
+    "pt": "Orai, irmãos e irmãs, para que o meu e o vosso sacrifício seja aceito por Deus, Pai todo-poderoso.",
     "titleEn": "Pray, brethren",
     "textEn": "Priest: \"Pray, brethren (brothers and sisters), that my sacrifice and yours may be acceptable to God, the almighty Father.\" — Your response: \"May the Lord accept the sacrifice at your hands for the praise and glory of his name, for our good and the good of all his holy Church.\"",
     "explanation": "Said as the priest prepares the gifts at the altar, before the Prayer over the Offerings."
@@ -72,6 +79,7 @@
       "coracoes ao alto",
       "demos gracas ao senhor nosso deus"
     ],
+    "pt": "Corações ao alto.",
     "titleEn": "Preface dialogue",
     "textEn": "Priest: \"Lift up your hearts.\" — Your response: \"We lift them up to the Lord.\" Priest: \"Let us give thanks to the Lord our God.\" — Your response: \"It is right and just.\"",
     "explanation": "Fixed opening dialogue before every Preface, regardless of which Preface text follows (the variable Preface body is handled separately)."
@@ -81,6 +89,7 @@
     "keywords": [
       "santo santo santo senhor deus do universo"
     ],
+    "pt": "Santo, Santo, Santo, Senhor Deus do Universo. O céu e a terra proclamam a vossa glória. Hosana nas alturas. Bendito o que vem em nome do Senhor. Hosana nas alturas.",
     "titleEn": "Holy, Holy, Holy (Sanctus)",
     "textEn": "Holy, Holy, Holy Lord God of hosts. Heaven and earth are full of your glory. Hosanna in the highest. Blessed is he who comes in the name of the Lord. Hosanna in the highest.",
     "explanation": "Sung or recited by the whole assembly together, right after the Preface."
@@ -90,6 +99,7 @@
     "keywords": [
       "misterio da fe"
     ],
+    "pt": "Mistério da fé.",
     "matchPriority": "low — only match this form if neither misterio-da-fe-b nor misterio-da-fe-c matched first (their cues both contain this phrase as a prefix)",
     "titleEn": "Memorial Acclamation — Form A",
     "priestCuePt": "Mistério da fé",
@@ -102,6 +112,7 @@
     "keywords": [
       "misterio da fe e do amor"
     ],
+    "pt": "Mistério da fé e do amor.",
     "titleEn": "Memorial Acclamation — Form B",
     "priestCuePt": "Mistério da fé e do amor",
     "responsePt": "Todas as vezes que comemos deste pão e bebemos deste cálice, anunciamos, Senhor, a vossa morte, enquanto esperamos a vossa vinda!",
@@ -113,6 +124,7 @@
     "keywords": [
       "misterio da fe para a salvacao do mundo"
     ],
+    "pt": "Mistério da fé para a salvação do mundo.",
     "titleEn": "Memorial Acclamation — Form C",
     "priestCuePt": "Mistério da fé para a salvação do mundo",
     "responsePt": "Salvador do mundo, salvai-nos vós que nos libertastes pela cruz e ressurreição!",
@@ -124,6 +136,7 @@
     "keywords": [
       "por cristo com cristo e em cristo"
     ],
+    "pt": "Por Cristo, com Cristo, em Cristo.",
     "titleEn": "Great Amen",
     "textEn": "Amen.",
     "explanation": "The assembly's solemn 'Amen' closing the Eucharistic Prayer's final doxology."
@@ -133,6 +146,7 @@
     "keywords": [
       "pai nosso que estais nos ceus"
     ],
+    "pt": "Pai nosso que estais nos céus, santificado seja o vosso nome; venha a nós o vosso reino; seja feita a vossa vontade, assim na terra como no céu. O pão nosso de cada dia nos dai hoje; perdoai-nos as nossas ofensas, assim como nós perdoamos a quem nos tem ofendido; e não nos deixeis cair em tentação, mas livrai-nos do mal.",
     "titleEn": "The Lord's Prayer",
     "textEn": "Our Father, who art in heaven, hallowed be thy name; thy kingdom come, thy will be done on earth as it is in heaven. Give us this day our daily bread, and forgive us our trespasses, as we forgive those who trespass against us; and lead us not into temptation, but deliver us from evil.",
     "explanation": "Said or sung by the whole assembly together."
@@ -142,6 +156,7 @@
     "keywords": [
       "vosso e o reino o poder e a gloria"
     ],
+    "pt": "Vosso é o reino, o poder e a glória, para sempre.",
     "titleEn": "Doxology response",
     "textEn": "For the kingdom, the power and the glory are yours, now and for ever.",
     "explanation": "The assembly's response after the priest's embolism following the Lord's Prayer."
@@ -151,6 +166,7 @@
     "keywords": [
       "a paz do senhor esteja sempre convosco"
     ],
+    "pt": "A paz do Senhor esteja sempre convosco.",
     "titleEn": "Sign of Peace",
     "textEn": "Priest: \"The peace of the Lord be with you always.\" — Your response: \"And with your spirit.\"",
     "explanation": "Precedes the exchange of a sign of peace with those nearby."
@@ -160,6 +176,7 @@
     "keywords": [
       "cordeiro de deus que tirais o pecado do mundo"
     ],
+    "pt": "Cordeiro de Deus, que tirais o pecado do mundo, tende piedade de nós. Cordeiro de Deus, que tirais o pecado do mundo, tende piedade de nós. Cordeiro de Deus, que tirais o pecado do mundo, dai-nos a paz.",
     "titleEn": "Lamb of God (Agnus Dei)",
     "textEn": "Lamb of God, you take away the sins of the world, have mercy on us. Lamb of God, you take away the sins of the world, have mercy on us. Lamb of God, you take away the sins of the world, grant us peace.",
     "explanation": "Said or sung by the whole assembly while the host is broken, before Communion."
@@ -170,6 +187,7 @@
       "felizes os convidados para a ceia do senhor",
       "eis o cordeiro de deus que tira o pecado do mundo"
     ],
+    "pt": "Eis o Cordeiro de Deus, eis quem tira o pecado do mundo. Felizes os convidados para a ceia do Senhor.",
     "titleEn": "Invitation to Communion",
     "textEn": "Priest: \"Behold the Lamb of God, behold him who takes away the sins of the world. Blessed are those called to the supper of the Lamb.\" — Your response: \"Lord, I am not worthy that you should enter under my roof, but only say the word and my soul shall be healed.\"",
     "explanation": "Said by the priest holding up the host, just before Communion is distributed."
@@ -181,6 +199,7 @@
       "a missa terminou",
       "podeis ir em paz"
     ],
+    "pt": "Ide em paz.",
     "titleEn": "Dismissal",
     "textEn": "Priest: \"Go in peace.\" — Your response: \"Thanks be to God.\"",
     "explanation": "Closes the Mass. Wording varies slightly (a few authorized forms exist); the response is always the same."
@@ -190,6 +209,7 @@
     "keywords": [
       "abencoe vos deus todo poderoso"
     ],
+    "pt": "Abençoe-vos Deus todo-poderoso, Pai e Filho e Espírito Santo.",
     "titleEn": "Final Blessing",
     "textEn": "Priest: \"May almighty God bless you, the Father, and the Son, and the Holy Spirit.\" — Your response: \"Amen.\"",
     "explanation": "Simple Trinitarian form of the final blessing, just before the dismissal."
