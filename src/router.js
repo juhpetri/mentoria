@@ -15,31 +15,38 @@ import { translatePtToEn } from './translate.js';
 const INTERIM_CHUNK_WORDS = 6;
 
 export function createRouter({ catalogEntries, liturgyCache, dedupGuard, speechQueue, onSegmentClassified }) {
-  // Fixed, monotonically-advancing word window: words 0-5 translated/spoken
-  // once, then 6-11, then 12-17, etc. Web Speech's interim hypothesis is
-  // unstable (it rewrites/reorders/drops words as more audio arrives), so
-  // diffing against the previous hypothesis kept producing repeat
-  // translations. Instead we commit each window permanently the first time
-  // it becomes available and never revisit it, even if a later interim
-  // revision changes those words -> no duplicate/overlapping speech, at the
-  // cost of occasionally locking in a window slightly before the engine's
-  // final wording. nextWordIndex is the index of the first not-yet-spoken
-  // word of the current utterance.
-  let nextWordIndex = 0;
+  // SpeechRecognition's result list holds several independent segments at
+  // once (it splits continuous speech on detected pauses), each identified
+  // by a stable `segmentId` (event.resultIndex) until it finalizes. Each
+  // segment gets its own fixed, monotonically-advancing word window: words
+  // 0-5 translated/spoken once, then 6-11, then 12-17, etc, committed
+  // permanently the first time available and never revisited — even if a
+  // later interim revision changes those words — so segments never
+  // interleave into each other and no window is ever spoken twice.
+  const nextWordIndexBySegment = new Map();
+
+  function getNextWordIndex(segmentId) {
+    return nextWordIndexBySegment.get(segmentId) ?? 0;
+  }
 
   // Called on every interim (not-yet-final) STT result. Fires live
   // translation early, in fixed word windows, so long continuous speech
   // doesn't go silent until the priest pauses.
-  async function handleInterim(rawText) {
+  async function handleInterim(rawText, segmentId) {
     const norm = normalize(rawText);
     if (!norm) return;
     const words = norm.split(' ');
+    let nextWordIndex = getNextWordIndex(segmentId);
 
-    // Hypothesis got shorter than what we already committed -> the engine
-    // started a new utterance (e.g. after a restart); resync forward.
+    // Hypothesis got shorter than what we already committed for this
+    // segment -> resync forward rather than rewinding into already-spoken
+    // territory.
     if (words.length < nextWordIndex) nextWordIndex = words.length;
 
-    if (words.length - nextWordIndex < INTERIM_CHUNK_WORDS) return;
+    if (words.length - nextWordIndex < INTERIM_CHUNK_WORDS) {
+      nextWordIndexBySegment.set(segmentId, nextWordIndex);
+      return;
+    }
 
     // Cheap short-circuit: if this looks like a fixed/catalog phrase, let
     // handleSegment's precise matching handle it on the final event instead
@@ -48,7 +55,7 @@ export function createRouter({ catalogEntries, liturgyCache, dedupGuard, speechQ
 
     const windowEnd = nextWordIndex + INTERIM_CHUNK_WORDS;
     const chunkWords = words.slice(nextWordIndex, windowEnd);
-    nextWordIndex = windowEnd;
+    nextWordIndexBySegment.set(segmentId, windowEnd);
     const chunkText = chunkWords.join(' ');
 
     const liveEn = await translatePtToEn(chunkText);
@@ -58,20 +65,20 @@ export function createRouter({ catalogEntries, liturgyCache, dedupGuard, speechQ
     }
   }
 
-  async function handleSegment(rawText) {
+  async function handleSegment(rawText, segmentId) {
     const norm = normalize(rawText);
     if (!norm) return;
 
-    // If part of this utterance was already streamed live via interim
+    const nextWordIndex = getNextWordIndex(segmentId);
+    nextWordIndexBySegment.delete(segmentId);
+
+    // If part of this segment was already streamed live via interim
     // chunks above, only the still-unspoken tail remains to handle here —
     // skip dedup/catalog/reading matching, which already happened (or
     // deliberately didn't apply) during streaming.
     if (nextWordIndex > 0) {
       const words = norm.split(' ');
-      // Only the words beyond the last committed window remain unspoken;
-      // never revisit a window already spoken via handleInterim.
       const tail = words.slice(Math.min(nextWordIndex, words.length)).join(' ');
-      nextWordIndex = 0;
       dedupGuard.remember(norm);
       if (tail) {
         const liveEn = await translatePtToEn(tail);
@@ -137,9 +144,9 @@ export function createRouter({ catalogEntries, liturgyCache, dedupGuard, speechQ
   }
 
   // Called when the user manually stops (R9b) so leftover streaming state
-  // from an interrupted utterance doesn't leak into the next session.
+  // from interrupted segments doesn't leak into the next session.
   function reset() {
-    nextWordIndex = 0;
+    nextWordIndexBySegment.clear();
   }
 
   return { handleSegment, handleInterim, reset };

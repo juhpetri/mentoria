@@ -50,8 +50,8 @@ async function main() {
   let stt;
   try {
     stt = createSpeechToText({
-      onFinalSegment: (text) => router.handleSegment(text),
-      onInterim: (text) => router.handleInterim(text),
+      onFinalSegment: (text, segmentId) => router.handleSegment(text, segmentId),
+      onInterim: (text, segmentId) => router.handleInterim(text, segmentId),
       onError: (err) => setStatus(`Error: ${err}`),
     });
   } catch (err) {

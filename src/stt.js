@@ -14,13 +14,18 @@ export function createSpeechToText({ onFinalSegment, onInterim, onError } = {}) 
   let stoppedByUser = false;
 
   recognition.onresult = (event) => {
+    // event.results is cumulative and can hold several independent segments
+    // at once (the engine splits continuous speech on detected pauses/VAD),
+    // each growing on its own. `i` is that segment's stable id until it
+    // finalizes, so callers can track per-segment state instead of treating
+    // every interim callback as one single growing utterance.
     for (let i = event.resultIndex; i < event.results.length; i++) {
       const result = event.results[i];
       const transcript = result[0].transcript;
       if (result.isFinal) {
-        onFinalSegment?.(transcript.trim());
+        onFinalSegment?.(transcript.trim(), i);
       } else {
-        onInterim?.(transcript.trim());
+        onInterim?.(transcript.trim(), i);
       }
     }
   };
