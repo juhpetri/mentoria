@@ -469,12 +469,12 @@ original framing).
 
 **Fix**: use the *interim* (not-yet-final) results the Web Speech API already emits
 continuously, not just the final one. `router.js`'s `handleInterim()` chunks the
-growing interim transcript by word count (`INTERIM_CHUNK_WORDS = 12`) and
+growing interim transcript by word count (`INTERIM_CHUNK_WORDS = 6`) and
 translates/speaks each new chunk as soon as it accumulates, without waiting for
 `isFinal`. When `isFinal` does eventually arrive, `handleSegment()` only speaks
 whatever tail wasn't already streamed (tracked via a word-count offset), instead of
 re-speaking the whole utterance. Short utterances (greetings, responses, fixed Ordinary
-parts) finalize before ever reaching the 12-word threshold, so they're unaffected and
+parts) finalize before ever reaching the 6-word threshold, so they're unaffected and
 still go through the normal precise catalog/reading matching. Increases MyMemory call
 volume during long continuous speech (more, smaller translation requests) — acceptable
 tradeoff for a prototype; revisit if the free-tier rate limit (R9 constraint) becomes a

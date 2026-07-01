@@ -12,7 +12,7 @@ import { translatePtToEn } from './translate.js';
 // waiting for isFinal. Short utterances (greetings, responses, fixed parts)
 // finalize before ever reaching this threshold, so they're unaffected and
 // still go through the precise catalog/reading matching in handleSegment.
-const INTERIM_CHUNK_WORDS = 12;
+const INTERIM_CHUNK_WORDS = 6;
 
 export function createRouter({ catalogEntries, liturgyCache, dedupGuard, speechQueue, onSegmentClassified }) {
   // How many words of the *current* utterance have already been streamed
